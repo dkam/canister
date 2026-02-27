@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2018_10_03_000009) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
   create_table "galleries", force: :cascade do |t|
     t.string "checksum"
     t.datetime "created_at", null: false
@@ -63,6 +63,7 @@ ActiveRecord::Schema[8.1].define(version: 2018_10_03_000009) do
 
   create_table "scene_markers", force: :cascade do |t|
     t.datetime "created_at", null: false
+    t.decimal "end_seconds"
     t.integer "primary_tag_id", null: false
     t.integer "scene_id", null: false
     t.decimal "seconds", null: false

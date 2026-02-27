@@ -199,26 +199,11 @@ class Stash::Manager
       @message = "Waiting..."
       @current = 0
       @total = 0
-      trigger_subscription
       @rake = true
     end
 
     def add_log(message)
       @logs.unshift(message)
-      trigger_subscription
-    end
-
-    def trigger_subscription
-      return if @rake
-
-      payload = {
-        job_id: @job_id,
-        message: @message,
-        progress: progress,
-        logs: @logs
-      }.to_json
-
-      StashApiSchema.subscriptions.trigger('metadataUpdate', {}, payload)
     end
 
     def try

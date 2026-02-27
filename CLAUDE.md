@@ -1,21 +1,18 @@
 # Canister
 
-Rails API server for the Canister media organizer. Serves a GraphQL API and ActionCable subscriptions for a separate frontend.
+Rails app for the Canister media organizer. Serves an HTML frontend using Turbo/Stimulus/Tailwind.
 
 ## Stack
 
 - **Ruby**: 3.4.7
-- **Rails**: 8.1.2 (API-only, `config.api_only = true`)
+- **Rails**: 8.1.2
 - **Database**: SQLite3 (`db/development.sqlite3`, `db/test.sqlite3`)
-- **API**: GraphQL (`/graphql`) + ActionCable (`/subscriptions`)
-- **No asset pipeline** — Sprockets is commented out in `application.rb`
-- **No views or helpers**
+- **Frontend**: Turbo, Stimulus, Tailwind CSS, Propshaft, Importmap
 
 ## Key Gems
 
-- `graphql`, `graphql-errors` — GraphQL API
-- `redis` — ActionCable adapter
-- `kaminari` — pagination
+- `solid_cache`, `solid_queue`, `solid_cable` — Solid stack (no Redis)
+- `pagy` — pagination
 - `scoped_search` — search
 - `streamio-ffmpeg` — video processing
 - `mechanize`, `selenium-webdriver` — scrapers
@@ -56,8 +53,7 @@ rails metadata:generate_all      # run all generate tasks
 
 ## App Structure
 
-- `app/graphql/` — schema, types, mutations, resolvers, functions
-- `app/controllers/` — thin REST controllers (mostly media streaming/serving)
+- `app/controllers/` — controllers (HTML views + media streaming/serving)
 - `app/jobs/` — background jobs (scan, import, export, generate, clean)
 - `app/models/concerns/` — `Filterable`, `Pageable`, `Sortable`, `Taggable`
 - `lib/` — autoloaded and eager-loaded
@@ -69,11 +65,11 @@ rails metadata:generate_all      # run all generate tasks
 
 ## Upgrade Status
 
-Rails upgrade **complete** — now on Rails 8.1.2 (`upgrade-rails-8.1-ruby-3.4.7` branch).
+Rails upgrade **complete** — now on Rails 8.1.2.
+Solid stack **complete** — Solid Cache, Solid Queue, Solid Cable in use (no Redis).
 
 ### Next steps
 
-- Migrate to Solid Cache + Solid Queue + Solid Cable (replace Redis)
 - Upgrade Ruby 3.4.7 → 4.0.1
 
 ### Known issues
