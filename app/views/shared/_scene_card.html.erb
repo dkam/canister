@@ -4,10 +4,10 @@
         controller: "scene-card",
         "scene-card-preview-url-value": preview_scene_path(scene)
       },
-      class: "block bg-white rounded-lg border border-gray-200 shadow-sm hover:shadow-md transition-shadow overflow-hidden group" do %>
+      class: "block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden group" do %>
 
   <%# Thumbnail / preview %>
-  <div class="relative aspect-video bg-gray-100 overflow-hidden">
+  <div class="relative aspect-video bg-gray-100 dark:bg-gray-700 overflow-hidden">
     <img src="<%= screenshot_scene_path(scene) %>"
          alt="<%= scene.title.presence || File.basename(scene.path) %>"
          loading="lazy"
@@ -26,7 +26,7 @@
 
   <%# Metadata %>
   <div class="p-3">
-    <h3 class="text-sm font-medium text-gray-900 truncate leading-snug">
+    <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate leading-snug">
       <%= scene.title.presence || File.basename(scene.path, ".*") %>
     </h3>
 
@@ -35,14 +35,14 @@
         <span class="text-xs text-gray-400"><%= scene.date.year %></span>
       <% end %>
       <% if scene.studio.present? %>
-        <span class="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded font-medium">
+        <span class="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium">
           <%= scene.studio.name %>
         </span>
       <% end %>
     </div>
 
     <% if scene.performers.any? %>
-      <p class="text-xs text-gray-500 mt-1 truncate">
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
         <%= scene.performers.map(&:name).join(", ") %>
       </p>
     <% end %>

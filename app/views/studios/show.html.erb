@@ -4,22 +4,22 @@
 
   <%# Studio header %>
   <div class="flex items-center gap-4 mb-6">
-    <div class="w-16 h-16 rounded-full bg-gray-100 overflow-hidden shrink-0">
+    <div class="w-16 h-16 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden shrink-0">
       <img src="<%= image_studio_path(@studio) %>"
            alt="<%= @studio.name %>"
            class="w-full h-full object-cover"
            onerror="this.style.display='none'">
     </div>
     <div>
-      <h1 class="text-2xl font-bold text-gray-900"><%= @studio.name %></h1>
+      <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100"><%= @studio.name %></h1>
       <% if @studio.url.present? %>
-        <a href="<%= @studio.url %>" target="_blank" class="text-sm text-indigo-600 hover:underline">
+        <a href="<%= @studio.url %>" target="_blank" class="text-sm text-indigo-600 dark:text-indigo-400 hover:underline">
           <%= @studio.url %>
         </a>
       <% end %>
     </div>
     <div class="ml-auto">
-      <p class="text-sm text-gray-500"><%= raw @pagy.info_tag %></p>
+      <p class="text-sm text-gray-500 dark:text-gray-400"><%= raw @pagy.info_tag %></p>
     </div>
   </div>
 
@@ -31,7 +31,7 @@
   </div>
 
   <% if @scenes.empty? %>
-    <p class="text-gray-400 py-12 text-center">No scenes found for this studio.</p>
+    <p class="text-gray-400 dark:text-gray-500 py-12 text-center">No scenes found for this studio.</p>
   <% end %>
 
   <div class="mt-6 flex justify-center">

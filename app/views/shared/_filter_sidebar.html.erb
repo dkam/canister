@@ -5,41 +5,41 @@
 
   <%# Search %>
   <div>
-    <%= f.label :q, "Search", class: "block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1" %>
+    <%= f.label :q, "Search", class: "block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1" %>
     <%= f.text_field :q, value: params[:q], placeholder: "Title, details, path…",
-          class: "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500",
+          class: "w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400",
           data: { action: "input->filter#debounce" } %>
   </div>
 
   <%# Sort %>
   <div>
-    <%= f.label :sort, "Sort by", class: "block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1" %>
+    <%= f.label :sort, "Sort by", class: "block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1" %>
     <div class="flex gap-2">
       <%= f.select :sort,
             [["Path", "path"], ["Title", "title"], ["Date", "date"], ["Rating", "rating"], ["Duration", "duration"]],
             { selected: params[:sort] || "path" },
-            class: "flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm",
+            class: "flex-1 border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400",
             data: { action: "change->filter#submit" } %>
       <%= f.select :direction,
             [["Asc ↑", "asc"], ["Desc ↓", "desc"]],
             { selected: params[:direction] || "asc" },
-            class: "border border-gray-300 rounded-lg px-3 py-2 text-sm",
+            class: "border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400",
             data: { action: "change->filter#submit" } %>
     </div>
   </div>
 
   <%# Rating %>
   <div>
-    <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Rating</p>
+    <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Rating</p>
     <div class="space-y-1">
       <% [5, 4, 3, 2, 1].each do |r| %>
         <label class="flex items-center gap-2 cursor-pointer group">
           <input type="radio" name="rating" value="<%= r * 20 %>"
                  <%= "checked" if params[:rating].to_i == r * 20 %>
-                 class="text-indigo-600 focus:ring-indigo-500"
+                 class="text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                  data-action="change->filter#submit">
           <span class="text-sm text-amber-400"><%= "★" * r %><span class="text-gray-300"><%= "★" * (5 - r) %></span></span>
-          <span class="text-xs text-gray-500">& up</span>
+          <span class="text-xs text-gray-500 dark:text-gray-400">& up</span>
         </label>
       <% end %>
     </div>
@@ -47,15 +47,15 @@
 
   <%# Resolution %>
   <div>
-    <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Resolution</p>
+    <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Resolution</p>
     <div class="space-y-1">
       <% %w[4k 1080p 720p 480p 240p].each do |res| %>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" name="resolution" value="<%= res %>"
                  <%= "checked" if params[:resolution] == res %>
-                 class="text-indigo-600 focus:ring-indigo-500"
+                 class="text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
                  data-action="change->filter#submit">
-          <span class="text-sm text-gray-700"><%= res %></span>
+          <span class="text-sm text-gray-700 dark:text-gray-300"><%= res %></span>
         </label>
       <% end %>
     </div>
@@ -64,11 +64,11 @@
   <%# Studio %>
   <% if @studios.any? %>
     <div>
-      <%= f.label :studio_id, "Studio", class: "block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1" %>
+      <%= f.label :studio_id, "Studio", class: "block text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-1" %>
       <%= f.select :studio_id,
             @studios.map { |s| [s.name, s.id] },
             { include_blank: "All Studios", selected: params[:studio_id] },
-            class: "w-full border border-gray-300 rounded-lg px-3 py-2 text-sm",
+            class: "w-full border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 rounded-lg px-3 py-2 text-sm focus:ring-indigo-500 dark:focus:ring-indigo-400 focus:border-indigo-500 dark:focus:border-indigo-400",
             data: { action: "change->filter#submit" } %>
     </div>
   <% end %>
@@ -76,15 +76,15 @@
   <%# Performers (scrollable checkbox list) %>
   <% if @performers.any? %>
     <div>
-      <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">People</p>
-      <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+      <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">People</p>
+      <div class="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
         <% @performers.each do |performer| %>
-          <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
+          <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
             <input type="checkbox" name="filter_performers[]" value="<%= performer.id %>"
                    <%= "checked" if Array(params[:filter_performers]).include?(performer.id.to_s) %>
-                   class="text-indigo-600 rounded focus:ring-indigo-500"
+                   class="text-indigo-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
                    data-action="change->filter#submit">
-            <span class="text-sm text-gray-700 truncate"><%= performer.name %></span>
+            <span class="text-sm text-gray-700 dark:text-gray-300 truncate"><%= performer.name %></span>
           </label>
         <% end %>
       </div>
@@ -94,15 +94,15 @@
   <%# Tags (scrollable checkbox list) %>
   <% if @tags.any? %>
     <div>
-      <p class="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Tags</p>
-      <div class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+      <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Tags</p>
+      <div class="max-h-48 overflow-y-auto border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 rounded-lg divide-y divide-gray-100 dark:divide-gray-700">
         <% @tags.each do |tag| %>
-          <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50">
+          <label class="flex items-center gap-2 px-3 py-2 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
             <input type="checkbox" name="tags[]" value="<%= tag.id %>"
                    <%= "checked" if Array(params[:tags]).include?(tag.id.to_s) %>
-                   class="text-indigo-600 rounded focus:ring-indigo-500"
+                   class="text-indigo-600 rounded focus:ring-indigo-500 dark:focus:ring-indigo-400"
                    data-action="change->filter#submit">
-            <span class="text-sm text-gray-700 truncate"><%= tag.name %></span>
+            <span class="text-sm text-gray-700 dark:text-gray-300 truncate"><%= tag.name %></span>
           </label>
         <% end %>
       </div>
@@ -112,7 +112,7 @@
   <%# Clear filters link %>
   <% if @filters_active %>
     <%= link_to "Clear all filters", scenes_path,
-          class: "block text-center text-sm text-gray-500 hover:text-gray-700 border border-gray-200 rounded-lg py-2" %>
+          class: "block text-center text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 border border-gray-200 dark:border-gray-700 rounded-lg py-2" %>
   <% end %>
 
 <% end %>

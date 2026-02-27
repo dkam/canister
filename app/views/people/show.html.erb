@@ -5,14 +5,14 @@
 
     <%# Profile card %>
     <div class="lg:w-64 xl:w-72 shrink-0 mb-6 lg:mb-0">
-      <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
-        <div class="aspect-[3/4] bg-gray-100">
+      <div class="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden shadow-sm">
+        <div class="aspect-[3/4] bg-gray-100 dark:bg-gray-700">
           <img src="<%= image_person_path(@person) %>"
                alt="<%= @person.name %>"
                class="w-full h-full object-cover object-top">
         </div>
         <div class="p-4">
-          <h1 class="text-xl font-bold text-gray-900"><%= @person.name %></h1>
+          <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100"><%= @person.name %></h1>
           <% if @person.favorite %>
             <span class="text-amber-400 text-sm">★ Favorite</span>
           <% end %>
@@ -20,51 +20,51 @@
           <dl class="mt-4 space-y-2 text-sm">
             <% if @person.birthdate.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Age</dt>
-                <dd class="font-medium text-gray-900"><%= @person.age %> (<%= @person.birthdate.strftime("%b %-d, %Y") %>)</dd>
+                <dt class="text-gray-500 dark:text-gray-400">Age</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.age %> (<%= @person.birthdate.strftime("%b %-d, %Y") %>)</dd>
               </div>
             <% end %>
             <% if @person.country.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Country</dt>
-                <dd class="font-medium text-gray-900"><%= @person.country %></dd>
+                <dt class="text-gray-500 dark:text-gray-400">Country</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.country %></dd>
               </div>
             <% end %>
             <% if @person.ethnicity.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Ethnicity</dt>
-                <dd class="font-medium text-gray-900"><%= @person.ethnicity %></dd>
+                <dt class="text-gray-500 dark:text-gray-400">Ethnicity</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.ethnicity %></dd>
               </div>
             <% end %>
             <% if @person.height.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Height</dt>
-                <dd class="font-medium text-gray-900"><%= @person.height %></dd>
+                <dt class="text-gray-500 dark:text-gray-400">Height</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.height %></dd>
               </div>
             <% end %>
             <% if @person.measurements.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Measurements</dt>
-                <dd class="font-medium text-gray-900"><%= @person.measurements %></dd>
+                <dt class="text-gray-500 dark:text-gray-400">Measurements</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.measurements %></dd>
               </div>
             <% end %>
             <% if @person.career_length.present? %>
               <div class="flex justify-between">
-                <dt class="text-gray-500">Career</dt>
-                <dd class="font-medium text-gray-900"><%= @person.career_length %></dd>
+                <dt class="text-gray-500 dark:text-gray-400">Career</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @person.career_length %></dd>
               </div>
             <% end %>
             <% if @person.aliases.present? %>
               <div>
-                <dt class="text-gray-500 mb-1">Aliases</dt>
-                <dd class="font-medium text-gray-900 text-xs"><%= @person.aliases %></dd>
+                <dt class="text-gray-500 dark:text-gray-400 mb-1">Aliases</dt>
+                <dd class="font-medium text-gray-900 dark:text-gray-100 text-xs"><%= @person.aliases %></dd>
               </div>
             <% end %>
           </dl>
 
           <% if @person.url.present? %>
             <a href="<%= @person.url %>" target="_blank"
-               class="mt-4 block text-sm text-indigo-600 hover:underline truncate">
+               class="mt-4 block text-sm text-indigo-600 dark:text-indigo-400 hover:underline truncate">
               <%= @person.url %>
             </a>
           <% end %>
@@ -75,8 +75,8 @@
     <%# Scenes grid %>
     <div class="flex-1 min-w-0">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900">Scenes</h2>
-        <p class="text-sm text-gray-500"><%= raw @pagy.info_tag %></p>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Scenes</h2>
+        <p class="text-sm text-gray-500 dark:text-gray-400"><%= raw @pagy.info_tag %></p>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         <% @scenes.each do |scene| %>
@@ -84,7 +84,7 @@
         <% end %>
       </div>
       <% if @scenes.empty? %>
-        <p class="text-gray-400 py-8 text-center">No scenes found.</p>
+        <p class="text-gray-400 dark:text-gray-500 py-8 text-center">No scenes found.</p>
       <% end %>
       <div class="mt-6 flex justify-center">
         <%= raw @pagy.series_nav %>

@@ -10,14 +10,14 @@
     <%= yield :head %>
     <%= javascript_importmap_tags %>
   </head>
-  <body class="bg-gray-50 min-h-screen flex flex-col text-gray-900 antialiased">
+  <body class="bg-white dark:bg-gray-900 min-h-screen flex flex-col text-gray-900 dark:text-gray-100 antialiased">
 
     <%# Top navigation %>
-    <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40">
       <div class="max-w-screen-2xl mx-auto px-4 sm:px-6">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center gap-6">
-            <%= link_to "Canister", root_path, class: "text-xl font-bold text-gray-900 mr-2" %>
+            <%= link_to "Canister", root_path, class: "text-xl font-bold text-gray-900 dark:text-gray-100 mr-2" %>
             <%= link_to "Scenes", scenes_path, class: nav_link_class("scenes") %>
             <%= link_to "People", people_path, class: nav_link_class("people") %>
             <%= link_to "Studios", studios_path, class: nav_link_class("studios") %>
@@ -29,7 +29,7 @@
 
     <%# Flash messages %>
     <% flash.each do |type, message| %>
-      <div class="bg-blue-50 border-l-4 border-blue-400 text-blue-800 px-4 py-3 mx-4 mt-4 rounded">
+      <div class="bg-blue-50 dark:bg-blue-900/30 border-l-4 border-blue-400 dark:border-blue-600 text-blue-800 dark:text-blue-200 px-4 py-3 mx-4 mt-4 rounded">
         <%= message %>
       </div>
     <% end %>
@@ -43,7 +43,7 @@
     <div id="mini-player"
          data-turbo-permanent
          data-controller="mini-player"
-         class="hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+         class="hidden fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700 shadow-lg">
       <%= render "shared/mini_player" %>
     </div>
 
