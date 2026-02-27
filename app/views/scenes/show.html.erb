@@ -134,7 +134,7 @@
         <h2 class="text-sm font-semibold text-gray-700 uppercase tracking-wide mb-3">Performers</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
           <% @scene.performers.each do |performer| %>
-            <%= render "shared/performer_card", performer: performer %>
+            <%= render "shared/person_card", person: performer %>
           <% end %>
         </div>
       <% end %>

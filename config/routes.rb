@@ -21,7 +21,7 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :performers, only: [:index, :show] do
+  resources :people, only: [:index, :show] do
     member do
       get :image
     end

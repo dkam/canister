@@ -1,71 +1,71 @@
-<% content_for :title, @performer.name %>
+<% content_for :title, @person.name %>
 
 <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
   <div class="lg:flex lg:gap-8">
 
-    <%# Performer profile card %>
+    <%# Profile card %>
     <div class="lg:w-64 xl:w-72 shrink-0 mb-6 lg:mb-0">
       <div class="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
         <div class="aspect-[3/4] bg-gray-100">
-          <img src="<%= image_performer_path(@performer) %>"
-               alt="<%= @performer.name %>"
+          <img src="<%= image_person_path(@person) %>"
+               alt="<%= @person.name %>"
                class="w-full h-full object-cover object-top">
         </div>
         <div class="p-4">
-          <h1 class="text-xl font-bold text-gray-900"><%= @performer.name %></h1>
-          <% if @performer.favorite %>
+          <h1 class="text-xl font-bold text-gray-900"><%= @person.name %></h1>
+          <% if @person.favorite %>
             <span class="text-amber-400 text-sm">★ Favorite</span>
           <% end %>
 
           <dl class="mt-4 space-y-2 text-sm">
-            <% if @performer.birthdate.present? %>
+            <% if @person.birthdate.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Age</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.age %> (<%= @performer.birthdate.strftime("%b %-d, %Y") %>)</dd>
+                <dd class="font-medium text-gray-900"><%= @person.age %> (<%= @person.birthdate.strftime("%b %-d, %Y") %>)</dd>
               </div>
             <% end %>
-            <% if @performer.country.present? %>
+            <% if @person.country.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Country</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.country %></dd>
+                <dd class="font-medium text-gray-900"><%= @person.country %></dd>
               </div>
             <% end %>
-            <% if @performer.ethnicity.present? %>
+            <% if @person.ethnicity.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Ethnicity</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.ethnicity %></dd>
+                <dd class="font-medium text-gray-900"><%= @person.ethnicity %></dd>
               </div>
             <% end %>
-            <% if @performer.height.present? %>
+            <% if @person.height.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Height</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.height %></dd>
+                <dd class="font-medium text-gray-900"><%= @person.height %></dd>
               </div>
             <% end %>
-            <% if @performer.measurements.present? %>
+            <% if @person.measurements.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Measurements</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.measurements %></dd>
+                <dd class="font-medium text-gray-900"><%= @person.measurements %></dd>
               </div>
             <% end %>
-            <% if @performer.career_length.present? %>
+            <% if @person.career_length.present? %>
               <div class="flex justify-between">
                 <dt class="text-gray-500">Career</dt>
-                <dd class="font-medium text-gray-900"><%= @performer.career_length %></dd>
+                <dd class="font-medium text-gray-900"><%= @person.career_length %></dd>
               </div>
             <% end %>
-            <% if @performer.aliases.present? %>
+            <% if @person.aliases.present? %>
               <div>
                 <dt class="text-gray-500 mb-1">Aliases</dt>
-                <dd class="font-medium text-gray-900 text-xs"><%= @performer.aliases %></dd>
+                <dd class="font-medium text-gray-900 text-xs"><%= @person.aliases %></dd>
               </div>
             <% end %>
           </dl>
 
-          <% if @performer.url.present? %>
-            <a href="<%= @performer.url %>" target="_blank"
+          <% if @person.url.present? %>
+            <a href="<%= @person.url %>" target="_blank"
                class="mt-4 block text-sm text-indigo-600 hover:underline truncate">
-              <%= @performer.url %>
+              <%= @person.url %>
             </a>
           <% end %>
         </div>

@@ -1,10 +1,10 @@
-<% content_for :title, "Performers" %>
+<% content_for :title, "People" %>
 
 <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
 
   <%# Search bar %>
-  <%= form_with url: performers_path, method: :get, class: "mb-6 flex gap-3" do |f| %>
-    <%= f.text_field :q, value: params[:q], placeholder: "Search performers…",
+  <%= form_with url: people_path, method: :get, class: "mb-6 flex gap-3" do |f| %>
+    <%= f.text_field :q, value: params[:q], placeholder: "Search people…",
           class: "flex-1 border border-gray-300 rounded-lg px-4 py-2 text-sm focus:ring-indigo-500 focus:border-indigo-500" %>
     <label class="flex items-center gap-2 text-sm text-gray-600 border border-gray-300 rounded-lg px-3 py-2">
       <%= f.check_box :favorites, checked: params[:favorites] == "true", class: "text-indigo-600" %>
@@ -18,14 +18,14 @@
 
   <%# Grid %>
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
-    <% @performers.each do |performer| %>
-      <%= render "shared/performer_card", performer: performer %>
+    <% @people.each do |person| %>
+      <%= render "shared/person_card", person: person %>
     <% end %>
   </div>
 
-  <% if @performers.empty? %>
+  <% if @people.empty? %>
     <div class="text-center py-16 text-gray-400">
-      <p class="text-lg">No performers found.</p>
+      <p class="text-lg">No people found.</p>
     </div>
   <% end %>
 
