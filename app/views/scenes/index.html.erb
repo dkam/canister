@@ -1,0 +1,112 @@
+<% content_for :title, "Scenes" %>
+
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
+  <div class="flex gap-6">
+
+    <%# Sidebar filters (desktop) %>
+    <aside class="hidden lg:block w-56 xl:w-64 shrink-0">
+      <div class="sticky top-20 bg-white rounded-lg border border-gray-200 p-4">
+        <%= render "shared/filter_sidebar" %>
+      </div>
+    </aside>
+
+    <%# Main content %>
+    <div class="flex-1 min-w-0">
+
+      <%# Toolbar: result count + view mode toggle %>
+      <div class="flex items-center justify-between mb-4" data-controller="view-mode" data-view-mode-key-value="scenes">
+        <p class="text-sm text-gray-500">
+          <%= raw @pagy.info_tag %>
+        </p>
+        <div class="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+          <button data-action="click->view-mode#grid"
+                  data-view-mode-target="gridBtn"
+                  title="Grid view"
+                  class="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-white transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M5 3a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2V5a2 2 0 00-2-2H5zM5 11a2 2 0 00-2 2v2a2 2 0 002 2h2a2 2 0 002-2v-2a2 2 0 00-2-2H5zM11 5a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V5zM11 13a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"/>
+            </svg>
+          </button>
+          <button data-action="click->view-mode#list"
+                  data-view-mode-target="listBtn"
+                  title="List view"
+                  class="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-white transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clip-rule="evenodd"/>
+            </svg>
+          </button>
+          <button data-action="click->view-mode#wall"
+                  data-view-mode-target="wallBtn"
+                  title="Wall view"
+                  class="p-1.5 rounded text-gray-500 hover:text-gray-900 hover:bg-white transition-colors">
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M3 3h6v6H3V3zm8 0h6v4h-6V3zm0 6h6v8h-6V9zM3 11h6v6H3v-6z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <%# Scenes list (Turbo Frame target for filter updates) %>
+      <turbo-frame id="scenes">
+        <%# Grid view (default) %>
+        <div data-view-mode-target="gridContainer"
+             class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-4">
+          <% @scenes.each do |scene| %>
+            <%= render "shared/scene_card", scene: scene %>
+          <% end %>
+        </div>
+
+        <%# List view %>
+        <div data-view-mode-target="listContainer" class="hidden">
+          <div class="bg-white rounded-lg border border-gray-200 divide-y divide-gray-100">
+            <% @scenes.each do |scene| %>
+              <div class="flex items-center gap-4 p-3 hover:bg-gray-50">
+                <img src="<%= screenshot_scene_path(scene) %>"
+                     alt=""
+                     loading="lazy"
+                     class="w-24 aspect-video object-cover rounded shrink-0">
+                <div class="flex-1 min-w-0">
+                  <%= link_to scene.title.presence || File.basename(scene.path, ".*"), scene_path(scene),
+                        class: "text-sm font-medium text-gray-900 hover:text-indigo-600 truncate block" %>
+                  <p class="text-xs text-gray-500 mt-0.5">
+                    <%= [scene.studio&.name, scene.date&.year, format_duration(scene.duration)].compact.join(" · ") %>
+                  </p>
+                  <% if scene.performers.any? %>
+                    <p class="text-xs text-gray-400 truncate"><%= scene.performers.map(&:name).join(", ") %></p>
+                  <% end %>
+                </div>
+                <% if scene.rating.present? && scene.rating > 0 %>
+                  <div class="text-xs shrink-0"><%= rating_stars(scene.rating) %></div>
+                <% end %>
+              </div>
+            <% end %>
+          </div>
+        </div>
+
+        <%# Wall view (masonry-like via CSS columns) %>
+        <div data-view-mode-target="wallContainer" class="hidden columns-2 sm:columns-3 lg:columns-4 xl:columns-5 gap-3 space-y-3">
+          <% @scenes.each do |scene| %>
+            <div class="break-inside-avoid">
+              <%= render "shared/scene_card", scene: scene %>
+            </div>
+          <% end %>
+        </div>
+
+        <%# Pagination %>
+        <div class="mt-6 flex justify-center">
+          <%= raw @pagy.series_nav %>
+        </div>
+      </turbo-frame>
+
+      <% if @scenes.empty? %>
+        <div class="text-center py-16 text-gray-400">
+          <p class="text-lg">No scenes found.</p>
+          <% if @filters_active %>
+            <%= link_to "Clear filters", scenes_path, class: "text-indigo-600 hover:underline text-sm mt-2 inline-block" %>
+          <% end %>
+        </div>
+      <% end %>
+
+    </div>
+  </div>
+</div>

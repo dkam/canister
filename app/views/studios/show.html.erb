@@ -1,0 +1,41 @@
+<% content_for :title, @studio.name %>
+
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
+
+  <%# Studio header %>
+  <div class="flex items-center gap-4 mb-6">
+    <div class="w-16 h-16 rounded-full bg-gray-100 overflow-hidden shrink-0">
+      <img src="<%= image_studio_path(@studio) %>"
+           alt="<%= @studio.name %>"
+           class="w-full h-full object-cover"
+           onerror="this.style.display='none'">
+    </div>
+    <div>
+      <h1 class="text-2xl font-bold text-gray-900"><%= @studio.name %></h1>
+      <% if @studio.url.present? %>
+        <a href="<%= @studio.url %>" target="_blank" class="text-sm text-indigo-600 hover:underline">
+          <%= @studio.url %>
+        </a>
+      <% end %>
+    </div>
+    <div class="ml-auto">
+      <p class="text-sm text-gray-500"><%= raw @pagy.info_tag %></p>
+    </div>
+  </div>
+
+  <%# Scenes grid %>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+    <% @scenes.each do |scene| %>
+      <%= render "shared/scene_card", scene: scene %>
+    <% end %>
+  </div>
+
+  <% if @scenes.empty? %>
+    <p class="text-gray-400 py-12 text-center">No scenes found for this studio.</p>
+  <% end %>
+
+  <div class="mt-6 flex justify-center">
+    <%= raw @pagy.series_nav %>
+  </div>
+
+</div>

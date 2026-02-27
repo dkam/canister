@@ -1,4 +1,33 @@
-# Roadmap
+# Canister Roadmap
+
+## Near-term (Frontend)
+
+### Solid Trifecta Migration
+- Replace Redis with `solid_cache`, `solid_queue`, `solid_cable` (gems already in Gemfile)
+- Configure `config/database.yml` with separate SQLite databases for each
+
+### Ruby 4.0.1 Upgrade
+- Currently on Ruby 3.4.7 — run `rubyup` skill before upgrading
+
+### Fix `rubyzip` API
+- Uses pre-v3 API — update when bumping to `~> 2.3+`
+
+### UX Enhancements
+- Mobile nav (hamburger / bottom tab bar)
+- Dark mode toggle
+- Keyboard shortcuts (Space, ←/→, F, M)
+- Gallery browser for scenes with attached galleries
+- Turbo Frames for filter sidebar (partial updates instead of full Turbo Drive)
+
+### Watch History
+- Persist resume position to DB (currently sessionStorage only)
+
+### Scene Queue / Playlist
+- Queue with autoplay, shuffle mode
+
+---
+
+# Roadmap (Prior)
 
 ## Multi-User Support & Authentication
 

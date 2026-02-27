@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title><%= content_for?(:title) ? yield(:title) + " — Canister" : "Canister" %></title>
+    <%= csrf_meta_tags %>
+    <%= csp_meta_tag %>
+    <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
+    <%= yield :head %>
+    <%= javascript_importmap_tags %>
+  </head>
+  <body class="bg-gray-50 min-h-screen flex flex-col text-gray-900 antialiased">
+
+    <%# Top navigation %>
+    <nav class="bg-white border-b border-gray-200 sticky top-0 z-40">
+      <div class="max-w-screen-2xl mx-auto px-4 sm:px-6">
+        <div class="flex items-center justify-between h-16">
+          <div class="flex items-center gap-6">
+            <%= link_to "Canister", root_path, class: "text-xl font-bold text-gray-900 mr-2" %>
+            <%= link_to "Scenes", scenes_path, class: nav_link_class("scenes") %>
+            <%= link_to "Performers", performers_path, class: nav_link_class("performers") %>
+            <%= link_to "Studios", studios_path, class: nav_link_class("studios") %>
+            <%= link_to "Tags", tags_path, class: nav_link_class("tags") %>
+          </div>
+        </div>
+      </div>
+    </nav>
+
+    <%# Flash messages %>
+    <% flash.each do |type, message| %>
+      <div class="bg-blue-50 border-l-4 border-blue-400 text-blue-800 px-4 py-3 mx-4 mt-4 rounded">
+        <%= message %>
+      </div>
+    <% end %>
+
+    <%# Main content — pb-20 leaves room for mini player %>
+    <main class="flex-1 pb-20">
+      <%= yield %>
+    </main>
+
+    <%# Mini player — data-turbo-permanent so it survives Turbo navigations %>
+    <div id="mini-player"
+         data-turbo-permanent
+         data-controller="mini-player"
+         class="hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 shadow-lg">
+      <%= render "shared/mini_player" %>
+    </div>
+
+  </body>
+</html>

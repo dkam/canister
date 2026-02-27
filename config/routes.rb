@@ -1,21 +1,43 @@
 Rails.application.routes.draw do
-get 'scenes/:id', to: 'scenes#vtt', id: /.*_thumbs.vtt|.*_sprite.jpg/
-  resources :scenes, except: [:create, :new, :destroy], defaults: { format: 'json' } do
-    get 'scene_markers/:id/stream', to: 'scene_markers#stream', as: :markers_stream, defaults: { format: 'mp4' }
-    get 'scene_markers/:id/preview', to: 'scene_markers#preview', as: :markers_preview, defaults: { format: 'webp' }
+  # VTT sprite/thumbs — must come before resources :scenes
+  get 'scenes/:id', to: 'scenes#vtt', id: /.*_thumbs\.vtt|.*_sprite\.jpg/
+
+  root to: "scenes#index"
+
+  resources :scenes, only: [:index, :show] do
+    member do
+      get :stream
+      get :screenshot
+      get 'screenshot/:seconds', to: 'scenes#screenshot', as: :screenshot_at
+      get :preview
+      get :webp
+      get 'vtt/chapter', to: 'scenes#chapter_vtt', as: :chapter_vtt
+    end
+    resources :scene_markers, only: [] do
+      member do
+        get :stream
+        get :preview
+      end
+    end
   end
-  get 'scenes/:id/stream', to: 'scenes#stream', as: :stream
-  get 'scenes/:id/screenshot', to: 'scenes#screenshot', as: :screenshot
-  get 'scenes/:id/screenshot/:seconds', to: 'scenes#screenshot'
-  get 'scenes/:id/preview', to: 'scenes#preview', as: :scene_preview
-  get 'scenes/:id/webp', to: 'scenes#webp', as: :scene_webp
-  get 'scenes/:id/vtt/chapter', to: 'scenes#chapter_vtt', defaults: { format: :vtt }, as: :scene_chapter_vtt
 
-  get 'galleries/:id/:index', to: 'galleries#file', as: :gallery_file
+  resources :performers, only: [:index, :show] do
+    member do
+      get :image
+    end
+  end
 
-  get 'performers/:id/image', to: 'performers#image', as: :performer_image
+  resources :studios, only: [:index, :show] do
+    member do
+      get :image
+    end
+  end
 
-  get 'studios/:id/image', to: 'studios#image', as: :studio_image
+  resources :tags, only: [:index]
 
-  root to: 'scenes#index'
+  resources :galleries, only: [:show] do
+    member do
+      get ':index', to: 'galleries#file', as: :file
+    end
+  end
 end

@@ -59,7 +59,4 @@ group :development, :test do
   gem 'debug', platforms: [:mri, :mingw, :x64_mingw]
 end
 
-group :development do
-  gem 'listen'
-end
 
