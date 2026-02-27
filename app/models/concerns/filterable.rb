@@ -10,14 +10,9 @@ module Filterable
       results = all
       params.each do |key, value|
         if value.present? || (value.is_a?(TrueClass) || value.is_a?(FalseClass))
-          value = value.split(',') if value.is_a? String
+          value = value.split(",") if value.is_a? String
           results = results.public_send(key, value)
         end
-      end
-      results
-    end
-  end
-end
       end
       results
     end
