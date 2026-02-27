@@ -3,14 +3,14 @@ class ScenesController < ApplicationController
 
   # GET /scenes
   def index
-    @scenes = Scene.includes(:studio, :performers)
-    @scenes = @scenes.search_for(params[:q]) if params[:q].present?
-    @scenes = @scenes.filter(scene_filter_params) if scene_filter_params.any?
+    @scenes = Scene.filter(scene_filter_params) if scene_filter_params.any?
+    @scenes ||= Scene.all
+    @scenes = @scenes.includes(:studio, :performers)
 
     if params[:sort].present?
       allowed = %w[title date rating duration path]
       sort_col = allowed.include?(params[:sort]) ? params[:sort] : "path"
-      direction = params[:direction] == "desc" ? "desc" : "asc"
+      direction = (params[:direction] == "desc") ? "desc" : "asc"
       @scenes = @scenes.reorder("scenes.#{sort_col} #{direction}")
     end
 
@@ -28,7 +28,7 @@ class ScenesController < ApplicationController
   end
 
   def stream
-    send_file @scene.stream_file_path, disposition: 'inline'
+    send_file @scene.stream_file_path, disposition: "inline"
   end
 
   def screenshot
@@ -39,20 +39,20 @@ class ScenesController < ApplicationController
 
     if params[:seconds]
       data = @scene.screenshot(seconds: params[:seconds], width: params[:width])
-      send_data data, filename: 'screenshot.jpg', disposition: 'inline'
+      send_data data, filename: "screenshot.jpg", disposition: "inline"
     elsif File.exist?(thumb_path) && params[:width] && params[:width].to_i < 400
-      response.headers['Content-Length'] = File.size(thumb_path).to_s
-      send_file thumb_path, disposition: 'inline'
+      response.headers["Content-Length"] = File.size(thumb_path).to_s
+      send_file thumb_path, disposition: "inline"
     else
-      response.headers['Content-Length'] = File.size(path).to_s
-      send_file path, disposition: 'inline'
+      response.headers["Content-Length"] = File.size(path).to_s
+      send_file path, disposition: "inline"
     end
   end
 
   def preview
     path = File.join(Stash::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.mp4")
     if File.exist?(path)
-      send_file path, disposition: 'inline'
+      send_file path, disposition: "inline"
     else
       render json: {}, status: :not_found
     end
@@ -61,46 +61,45 @@ class ScenesController < ApplicationController
   def webp
     path = File.join(Stash::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.webp")
     if File.exist?(path)
-      send_file path, disposition: 'inline'
+      send_file path, disposition: "inline"
     else
       screenshot
     end
   end
 
   def vtt
-    path = ''
-    if params[:format] == "jpg"
-      path = File.join(Stash::STASH_VTT_DIRECTORY, "#{@scene.checksum}_sprite.jpg")
+    path = if params[:format] == "jpg"
+      File.join(Stash::STASH_VTT_DIRECTORY, "#{@scene.checksum}_sprite.jpg")
     else
-      path = File.join(Stash::STASH_VTT_DIRECTORY, "#{@scene.checksum}_thumbs.vtt")
+      File.join(Stash::STASH_VTT_DIRECTORY, "#{@scene.checksum}_thumbs.vtt")
     end
 
-    send_file path, disposition: 'inline'
+    send_file path, disposition: "inline"
   end
 
   def chapter_vtt
-    send_data @scene.chapter_vtt, disposition: 'inline'
+    send_data @scene.chapter_vtt, disposition: "inline"
   end
 
   private
 
-    def set_scene
-      if params[:id].include?('.vtt')
-        params[:id].slice!('_thumbs.vtt')
-        params[:format] = 'vtt'
-      end
-      if params[:id].include?('.jpg')
-        params[:id].slice!('_sprite.jpg')
-        params[:format] = 'jpg'
-      end
-
-      @scene = Scene.find_by(checksum: params[:id]) || Scene.find(params[:id])
+  def set_scene
+    if params[:id].include?(".vtt")
+      params[:id].slice!("_thumbs.vtt")
+      params[:format] = "vtt"
+    end
+    if params[:id].include?(".jpg")
+      params[:id].slice!("_sprite.jpg")
+      params[:format] = "jpg"
     end
 
-    def scene_filter_params
-      params.permit(:rating, :resolution, :studio_id, :has_markers,
-                    tags: [], filter_performers: [])
-            .to_h
-            .reject { |_, v| v.blank? }
-    end
+    @scene = Scene.find_by(checksum: params[:id]) || Scene.find(params[:id])
+  end
+
+  def scene_filter_params
+    params.permit(:rating, :resolution, :studio_id, :has_markers,
+      tags: [], filter_performers: [])
+      .to_h
+      .reject { |_, v| v.blank? }
+  end
 end
