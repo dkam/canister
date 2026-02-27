@@ -1,8 +1,5 @@
 Rails.application.routes.draw do
-  post '/graphql', to: 'graphql#execute'
-  mount ActionCable.server => '/subscriptions'
-
-  get 'scenes/:id', to: 'scenes#vtt', id: /.*_thumbs.vtt|.*_sprite.jpg/
+get 'scenes/:id', to: 'scenes#vtt', id: /.*_thumbs.vtt|.*_sprite.jpg/
   resources :scenes, except: [:create, :new, :destroy], defaults: { format: 'json' } do
     get 'scene_markers/:id/stream', to: 'scene_markers#stream', as: :markers_stream, defaults: { format: 'mp4' }
     get 'scene_markers/:id/preview', to: 'scene_markers#preview', as: :markers_preview, defaults: { format: 'webp' }
@@ -20,5 +17,5 @@ Rails.application.routes.draw do
 
   get 'studios/:id/image', to: 'studios#image', as: :studio_image
 
-  root to: 'graphql#execute'
+  root to: 'scenes#index'
 end

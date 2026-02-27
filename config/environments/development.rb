@@ -56,5 +56,4 @@ Rails.application.configure do
   # TODO Remove from Dev?
   config.action_dispatch.x_sendfile_header = 'X-Accel-Redirect' # for NGINX
 
-  config.action_cable.disable_request_forgery_protection = true
 end

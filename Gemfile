@@ -39,9 +39,6 @@ gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 # Stash
 
-# API
-gem 'graphql', '~> 1.13'
-gem 'graphql-errors' #, '0.2.0'
 gem 'ostruct'    # required explicitly for Ruby 3.4+ (removed from default load path)
 gem 'benchmark'  # required explicitly for Ruby 3.5+ (mini_magick dependency)
 
