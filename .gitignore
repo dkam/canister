@@ -17,6 +17,10 @@
 /storage/*.sqlite3-wal
 /storage/*.sqlite3-shm
 
+# Ignore ActiveStorage files
+/storage/*
+!/storage/.keep
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

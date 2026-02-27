@@ -1,6 +1,9 @@
 Rails.application.routes.draw do
+  # Health check endpoint
+  get "health", to: "health#check"
+
   # VTT sprite/thumbs — must come before resources :scenes
-  get 'scenes/:id', to: 'scenes#vtt', id: /.*_thumbs\.vtt|.*_sprite\.jpg/
+  get "scenes/:id", to: "scenes#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/
 
   root to: "scenes#index"
 
@@ -8,10 +11,10 @@ Rails.application.routes.draw do
     member do
       get :stream
       get :screenshot
-      get 'screenshot/:seconds', to: 'scenes#screenshot', as: :screenshot_at
+      get "screenshot/:seconds", to: "scenes#screenshot", as: :screenshot_at
       get :preview
       get :webp
-      get 'vtt/chapter', to: 'scenes#chapter_vtt', as: :chapter_vtt
+      get "vtt/chapter", to: "scenes#chapter_vtt", as: :chapter_vtt
     end
     resources :scene_markers, only: [] do
       member do
@@ -37,7 +40,7 @@ Rails.application.routes.draw do
 
   resources :galleries, only: [:show] do
     member do
-      get ':index', to: 'galleries#file', as: :file
+      get ":index", to: "galleries#file", as: :file
     end
   end
 end

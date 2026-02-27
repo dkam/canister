@@ -1,12 +1,8 @@
-version: '2'
 services:
   web:
     build: .
     ports:
       - "3000:3000"
-      - "4000:4000"
-      - "4001:4001"
-      - "8008:8008"
     env_file:
       - .env
     volumes:
@@ -14,3 +10,14 @@ services:
       - ${STASH_METADATA}:${STASH_METADATA}
       - ${STASH_CACHE}:${STASH_CACHE}
       - ${STASH_DOWNLOADS}:${STASH_DOWNLOADS}
+      - ${STASH_STORAGE}:/app/storage
+    environment:
+      - RAILS_ENV=${RAILS_ENV:-development}
+      - RAILS_LOG_TO_STDOUT=true
+      - RAILS_SERVE_STATIC_FILES=${RAILS_SERVE_STATIC_FILES:-true}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
