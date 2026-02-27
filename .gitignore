@@ -11,6 +11,12 @@
 /db/**/*.sqlite3
 /db/**/*.sqlite3-journal
 
+# Ignore SQLite databases in storage/ (Solid Cache/Queue/Cable + main db)
+/storage/*.sqlite3
+/storage/*.sqlite3-journal
+/storage/*.sqlite3-wal
+/storage/*.sqlite3-shm
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*
@@ -23,3 +29,5 @@
 # Ignore application configuration
 /config/application.yml
 .env
+
+/config/master.key

@@ -13,7 +13,7 @@ module Stash::ZipUtility
     basename = File.basename(file.name, '.*')
     thumbnail_name = file.name.sub(basename, "#{basename}_thumb")
     thumbnail_file_path = File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum, thumbnail_name)
-    return thumbnail_file_path if File.exists?(thumbnail_file_path)
+    return thumbnail_file_path if File.exist?(thumbnail_file_path)
 
     file_path = File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum, file.name)
     image = MiniMagick::Image.open(file_path)

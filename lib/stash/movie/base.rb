@@ -3,7 +3,7 @@ class Stash::Movie::Base
     @manager = Stash::Manager.instance
     @path = path
     @info = FFMPEG::Movie.new(@path)
-    raise Errno::ENOENT, "The file '#{@path}' does not exist" unless File.exists?(@path)
+    raise Errno::ENOENT, "The file '#{@path}' does not exist" unless File.exist?(@path)
     raise Errno::EINVAL, "The file '#{@path}' is not a valid video" unless @info.valid?
   end
 
