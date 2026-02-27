@@ -14,7 +14,6 @@ class Stash::Manager
 
   def current=(value)
     @current = value
-    trigger_subscription
   end
 
   def initialize
