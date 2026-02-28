@@ -32,6 +32,13 @@
   <div>
     <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Rating</p>
     <div class="space-y-1">
+      <label class="flex items-center gap-2 cursor-pointer group">
+        <input type="radio" name="rating" value=""
+               <%= "checked" if params[:rating].blank? %>
+               class="text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+               data-action="change->filter#submit">
+        <span class="text-sm text-gray-700 dark:text-gray-300">All Ratings</span>
+      </label>
       <% [5, 4, 3, 2, 1].each do |r| %>
         <label class="flex items-center gap-2 cursor-pointer group">
           <input type="radio" name="rating" value="<%= r * 20 %>"
@@ -49,6 +56,13 @@
   <div>
     <p class="text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-2">Resolution</p>
     <div class="space-y-1">
+      <label class="flex items-center gap-2 cursor-pointer">
+        <input type="radio" name="resolution" value=""
+               <%= "checked" if params[:resolution].blank? %>
+               class="text-indigo-600 focus:ring-indigo-500 dark:focus:ring-indigo-400"
+               data-action="change->filter#submit">
+        <span class="text-sm text-gray-700 dark:text-gray-300">All</span>
+      </label>
       <% %w[4k 1080p 720p 480p 240p].each do |res| %>
         <label class="flex items-center gap-2 cursor-pointer">
           <input type="radio" name="resolution" value="<%= res %>"
