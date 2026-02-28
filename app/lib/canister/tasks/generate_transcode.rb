@@ -7,9 +7,10 @@ class Canister::Tasks::GenerateTranscode < Canister::Tasks::Base
   def start
     return if Canister::VALID_HTML5_CODECS.include?(@scene.video_codec)
     return if has_transcode?
-    create_folders
 
-    @manager.info("#{@scene.checksum} is of type #{@scene.video_codec}")
+    FileUtils.mkdir_p(transcode_dir)
+
+    @manager.info("#{@scene.checksum} is of type #{@scene.video_codec}, transcoding...")
     video = FFMPEG::Movie.new(@scene.path)
     percent = 0.0
 
@@ -28,18 +29,16 @@ class Canister::Tasks::GenerateTranscode < Canister::Tasks::Base
 
   private
 
-    def create_folders
-      FileUtils.mkdir_p(Canister::STASH_TRANSCODE_DIRECTORY) unless File.directory?(Canister::STASH_TRANSCODE_DIRECTORY)
-      temp_folder = File.join(Canister::STASH_TRANSCODE_DIRECTORY, 'tmp')
-      FileUtils.mkdir_p(temp_folder) unless File.directory?(temp_folder)
+    def transcode_dir
+      Canister::TRANSCODE_DIRECTORY
     end
 
     def temp_path
-      File.join(Canister::STASH_TRANSCODE_DIRECTORY, 'tmp', "#{@scene.checksum}.mp4")
+      File.join(transcode_dir, "#{@scene.checksum}.tmp.mp4")
     end
 
     def transcode_path
-      File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{@scene.checksum}.mp4")
+      File.join(transcode_dir, "#{@scene.checksum}.mp4")
     end
 
     def has_transcode?

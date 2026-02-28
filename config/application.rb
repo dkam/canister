@@ -27,7 +27,5 @@ module Canister
     # the framework and any gems in your application.
 
 
-    config.autoload_paths << Rails.root.join('lib')
-    config.eager_load_paths << Rails.root.join('lib')
   end
 end

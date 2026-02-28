@@ -21,6 +21,12 @@
 /storage/*
 !/storage/.keep
 
+# Ignore video and transcode content
+/videos/*
+!/videos/.keep
+/transcodes/*
+!/transcodes/.keep
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

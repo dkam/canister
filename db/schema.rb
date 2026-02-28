@@ -10,7 +10,35 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
+ActiveRecord::Schema[8.1].define(version: 2026_02_28_011259) do
+  create_table "active_storage_attachments", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.datetime "created_at", null: false
+    t.string "name", null: false
+    t.bigint "record_id", null: false
+    t.string "record_type", null: false
+    t.index ["blob_id"], name: "index_active_storage_attachments_on_blob_id"
+    t.index ["record_type", "record_id", "name", "blob_id"], name: "index_active_storage_attachments_uniqueness", unique: true
+  end
+
+  create_table "active_storage_blobs", force: :cascade do |t|
+    t.bigint "byte_size", null: false
+    t.string "checksum"
+    t.string "content_type"
+    t.datetime "created_at", null: false
+    t.string "filename", null: false
+    t.string "key", null: false
+    t.text "metadata"
+    t.string "service_name", null: false
+    t.index ["key"], name: "index_active_storage_blobs_on_key", unique: true
+  end
+
+  create_table "active_storage_variant_records", force: :cascade do |t|
+    t.bigint "blob_id", null: false
+    t.string "variation_digest", null: false
+    t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
+  end
+
   create_table "galleries", force: :cascade do |t|
     t.string "checksum"
     t.datetime "created_at", null: false
@@ -27,6 +55,16 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
     t.integer "performer_id"
     t.index ["gallery_id"], name: "index_galleries_performers_on_gallery_id"
     t.index ["performer_id"], name: "index_galleries_performers_on_performer_id"
+  end
+
+  create_table "libraries", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.string "default_video_kind", default: "video", null: false
+    t.string "kind", default: "local", null: false
+    t.string "name", null: false
+    t.string "path", null: false
+    t.boolean "read_only", default: false, null: false
+    t.datetime "updated_at", null: false
   end
 
   create_table "performers", force: :cascade do |t|
@@ -83,6 +121,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
     t.decimal "duration", precision: 7, scale: 2
     t.decimal "framerate", precision: 7, scale: 2
     t.integer "height"
+    t.integer "library_id"
     t.string "path"
     t.integer "rating"
     t.string "size"
@@ -93,6 +132,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
     t.string "video_codec"
     t.integer "width"
     t.index ["checksum"], name: "index_scenes_on_checksum"
+    t.index ["library_id"], name: "index_scenes_on_library_id"
     t.index ["path"], name: "index_scenes_on_path", unique: true
     t.index ["studio_id"], name: "index_scenes_on_studio_id"
   end
@@ -114,6 +154,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
     t.string "video_filename"
     t.string "video_url"
     t.index ["studio_id"], name: "index_scraped_items_on_studio_id"
+  end
+
+  create_table "screenshots", force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.integer "scene_id", null: false
+    t.float "timecode"
+    t.datetime "updated_at", null: false
+    t.index ["scene_id"], name: "index_screenshots_on_scene_id"
   end
 
   create_table "studios", force: :cascade do |t|
@@ -143,4 +191,9 @@ ActiveRecord::Schema[8.1].define(version: 2026_02_27_132218) do
     t.datetime "updated_at", null: false
     t.index ["name"], name: "index_tags_on_name"
   end
+
+  add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
+  add_foreign_key "scenes", "libraries"
+  add_foreign_key "screenshots", "scenes"
 end

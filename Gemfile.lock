@@ -102,6 +102,7 @@ GEM
     et-orbi (1.4.0)
       tzinfo
     fastimage (2.4.0)
+    ffi (1.17.3-arm64-darwin)
     fugit (1.12.1)
       et-orbi (~> 1.4)
       raabro (~> 1.4)
@@ -241,6 +242,9 @@ GEM
     reline (0.6.3)
       io-console (~> 0.5)
     rexml (3.4.4)
+    ruby-vips (2.3.0)
+      ffi (~> 1.12)
+      logger
     rubyntlm (0.6.5)
       base64
     rubyzip (3.2.2)
@@ -320,6 +324,7 @@ DEPENDENCIES
   propshaft
   puma (~> 6)
   rails (~> 8.1.0)
+  ruby-vips
   rubyzip
   scoped_search
   selenium-webdriver

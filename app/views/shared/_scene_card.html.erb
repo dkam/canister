@@ -1,6 +1,7 @@
 <%# Locals: scene %>
 <%= link_to scene_path(scene),
       data: {
+        turbo_frame: "_top",
         controller: "scene-card",
         "scene-card-preview-url-value": preview_scene_path(scene)
       },

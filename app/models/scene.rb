@@ -8,6 +8,9 @@ class Scene < ApplicationRecord
   has_and_belongs_to_many :performers
   has_one :gallery, as: :ownable, dependent: :nullify
   has_many :scene_markers, dependent: :destroy
+  has_many :screenshots, dependent: :destroy
+  has_one_attached :preview_clip
+  belongs_to :library, optional: true
   belongs_to :studio, optional: true, touch: true
 
   scoped_search on: [:title, :details, :path, :checksum]
@@ -73,22 +76,12 @@ class Scene < ApplicationRecord
 
   def is_streamable
     valid = mime_type == "video/quicktime" || mime_type == "video/mp4" || mime_type == "video/webm"
-
-    if !valid
-      transcode = File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
-      valid = File.exist?(transcode)
-    end
-
+    valid ||= File.exist?(transcode_path)
     valid
   end
 
   def stream_file_path
-    file_path = path
-    transcode = File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
-    if File.exist?(transcode)
-      file_path = transcode
-    end
-    file_path
+    File.exist?(transcode_path) ? transcode_path : path
   end
 
   def media_exists?
@@ -126,6 +119,10 @@ class Scene < ApplicationRecord
   end
 
   private
+
+  def transcode_path
+    File.join(Canister::TRANSCODE_DIRECTORY, "#{checksum}.mp4")
+  end
 
   def get_vtt_time(seconds)
     Time.at(seconds).gmtime.strftime("%H:%M:%S")

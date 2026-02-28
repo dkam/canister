@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   # Health check endpoint
-  get "health", to: "health#check"
+  get "up" => "rails/health#show", as: :rails_health_check
 
   # VTT sprite/thumbs — must come before resources :scenes
   get "scenes/:id", to: "scenes#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/

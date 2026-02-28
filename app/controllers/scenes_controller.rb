@@ -32,49 +32,32 @@ class ScenesController < ApplicationController
   end
 
   def screenshot
-    path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.jpg")
-    thumb_path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.thumb.jpg")
-
     expires_in 1.week
 
     if params[:seconds]
       data = @scene.screenshot(seconds: params[:seconds], width: params[:width])
-      send_data data, filename: "screenshot.jpg", disposition: "inline"
-    elsif File.exist?(thumb_path) && params[:width] && params[:width].to_i < 400
-      response.headers["Content-Length"] = File.size(thumb_path).to_s
-      send_file thumb_path, disposition: "inline"
-    else
-      response.headers["Content-Length"] = File.size(path).to_s
-      send_file path, disposition: "inline"
+      send_data data, filename: "screenshot.jpg", disposition: "inline", type: "image/jpeg"
+      return
     end
+
+    screenshot = @scene.screenshots.first
+    return head :not_found unless screenshot&.image&.attached?
+
+    send_data screenshot.image.download, filename: "screenshot.jpg", disposition: "inline", type: "image/jpeg"
   end
 
   def preview
-    path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.mp4")
-    if File.exist?(path)
-      send_file path, disposition: "inline"
-    else
-      render json: {}, status: :not_found
-    end
+    return head :not_found unless @scene.preview_clip.attached?
+
+    send_data @scene.preview_clip.download, disposition: "inline", type: "video/mp4"
   end
 
   def webp
-    path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{@scene.checksum}.webp")
-    if File.exist?(path)
-      send_file path, disposition: "inline"
-    else
-      screenshot
-    end
+    screenshot
   end
 
   def vtt
-    path = if params[:format] == "jpg"
-      File.join(Canister::STASH_VTT_DIRECTORY, "#{@scene.checksum}_sprite.jpg")
-    else
-      File.join(Canister::STASH_VTT_DIRECTORY, "#{@scene.checksum}_thumbs.vtt")
-    end
-
-    send_file path, disposition: "inline"
+    head :not_found
   end
 
   def chapter_vtt

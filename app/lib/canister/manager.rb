@@ -66,18 +66,21 @@ class Canister::Manager
     @logs = []
     @rake = rake
 
-    glob_path = File.join(Canister::STASH_DIRECTORY, "**", "*.{zip,m4v,mp4,mov,wmv}")
-    scan_paths = Dir[glob_path]
     @current = 0
-    @total = scan_paths.count
-    info("Starting scan of #{scan_paths.count} files")
-    scan_paths.each { |path|
-      @current += 1
-      try {
-        scan_task = Canister::Tasks::Scan.new(path: path)
-        scan_task.start
+    @total = 0
+    Library.all.each do |library|
+      glob_path = File.join(library.path, "**", "*.{zip,m4v,mp4,mov,wmv,mkv,avi,flv,webm}")
+      scan_paths = Dir[glob_path]
+      @total += scan_paths.count
+      info("Starting scan of #{scan_paths.count} files in #{library.name} (#{library.path})")
+      scan_paths.each { |path|
+        @current += 1
+        try {
+          scan_task = Canister::Tasks::Scan.new(path: path, library: library)
+          scan_task.start
+        }
       }
-    }
+    end
 
     idle
   end
@@ -173,22 +176,22 @@ class Canister::Manager
   # Logging
 
   def info(message)
-    Canister.logger.info(message)
+    Rails.logger.tagged(@job_id) { Rails.logger.info(message) }
     add_log(type: :info, message: message)
   end
 
   def debug(message)
-    Canister.logger.debug(message)
+    Rails.logger.tagged(@job_id) { Rails.logger.debug(message) }
     add_log(type: :debug, message: message)
   end
 
   def warn(message)
-    Canister.logger.warn(message)
+    Rails.logger.tagged(@job_id) { Rails.logger.warn(message) }
     add_log(type: :warn, message: message)
   end
 
   def error(message)
-    Canister.logger.error(message)
+    Rails.logger.tagged(@job_id) { Rails.logger.error(message) }
     add_log(type: :error, message: message)
   end
 
