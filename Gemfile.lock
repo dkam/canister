@@ -300,6 +300,7 @@ GEM
       base64
       websocket-extensions (>= 0.1.0)
     websocket-extensions (0.1.5)
+    xxhash (0.7.0)
     yaml (0.4.0)
     zeitwerk (2.7.5)
 
@@ -337,6 +338,7 @@ DEPENDENCIES
   tailwindcss-rails
   turbo-rails
   tzinfo-data
+  xxhash
 
 BUNDLED WITH
    2.7.2

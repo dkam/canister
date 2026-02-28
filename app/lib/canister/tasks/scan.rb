@@ -58,7 +58,7 @@ class Canister::Tasks::Scan < Canister::Tasks::Base
 
     def calculate_checksum
       @manager.info("#{@path} not found.  Calculating checksum...")
-      checksum = Digest::MD5.file(@path).hexdigest
+      checksum = XXhash.xxh64(File.binread(@path)).to_s(16)
       @manager.debug("Checksum calculated: #{checksum}")
       checksum
     end

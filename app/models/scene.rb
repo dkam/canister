@@ -69,15 +69,18 @@ class Scene < ApplicationRecord
 
   scope :missing_gallery, -> { joins("LEFT OUTER JOIN galleries ON galleries.ownable_id = scenes.id").where("galleries.ownable_id IS NULL") }
   scope :missing_performers, -> { left_outer_joins(:performers).where(performers: {id: nil}) }
-
-  def mime_type
-    Mime::Type.lookup_by_extension(File.extname(path).delete(".")).to_s
-  end
+  scope :needing_processing, -> {
+    bad_codec = where.not(video_codec: Canister::VALID_HTML5_CODECS)
+    bad_container = where(
+      "path NOT LIKE '%.mp4' AND path NOT LIKE '%.m4v' AND path NOT LIKE '%.mov' AND path NOT LIKE '%.webm'"
+    )
+    bad_codec.or(bad_container)
+  }
 
   def is_streamable
-    valid = mime_type == "video/quicktime" || mime_type == "video/mp4" || mime_type == "video/webm"
-    valid ||= File.exist?(transcode_path)
-    valid
+    return true if File.exist?(transcode_path)
+    Canister::VALID_HTML5_CODECS.include?(video_codec) &&
+      Canister::STREAMABLE_EXTENSIONS.include?(File.extname(path).downcase)
   end
 
   def stream_file_path

@@ -28,6 +28,7 @@ gem 'tzinfo-data', platforms: [:mingw, :mswin, :x64_mingw, :jruby]
 
 # Stash
 
+gem 'xxhash'
 gem 'ostruct'    # required explicitly for Ruby 3.4+ (removed from default load path)
 gem 'benchmark'  # required explicitly for Ruby 3.5+ (mini_magick dependency)
 
