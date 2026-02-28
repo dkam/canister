@@ -1,4 +1,4 @@
-class Stash::Scraper::Freeones < Stash::Scraper::MechanizeScraper
+class Canister::Scraper::Freeones < Canister::Scraper::MechanizeScraper
   def get_performer(performer_name)
     page = @mechanize.get("https://www.freeones.com/search/?t=1&q=#{performer_name}&view=thumbs")
     performer_link = page.links.find { |link| link.text.downcase == performer_name.downcase }

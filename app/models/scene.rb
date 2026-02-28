@@ -75,7 +75,7 @@ class Scene < ApplicationRecord
     valid = mime_type == "video/quicktime" || mime_type == "video/mp4" || mime_type == "video/webm"
 
     if !valid
-      transcode = File.join(Stash::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
+      transcode = File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
       valid = File.exist?(transcode)
     end
 
@@ -84,7 +84,7 @@ class Scene < ApplicationRecord
 
   def stream_file_path
     file_path = path
-    transcode = File.join(Stash::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
+    transcode = File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{checksum}.mp4")
     if File.exist?(transcode)
       file_path = transcode
     end
@@ -105,7 +105,7 @@ class Scene < ApplicationRecord
     end
 
     if Rails.cache.read(cache_key).nil?
-      data = Stash::Movie.screenshot(path: path, seconds: seconds, width: width)
+      data = Canister::Movie.screenshot(path: path, seconds: seconds, width: width)
       Rails.cache.write(cache_key, data)
       data
     else

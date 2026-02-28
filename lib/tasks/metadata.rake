@@ -2,22 +2,22 @@ namespace :metadata do
 
   desc "Import JSON metadata"
   task import: ['db:drop', 'db:create', 'db:migrate'] do
-    Stash::Manager.instance.import(job_id: 'rake')
+    Canister::Manager.instance.import(job_id: 'rake')
   end
 
   desc "Export JSON metadata."
   task export: :environment do
-    Stash::Manager.instance.export(job_id: 'rake')
+    Canister::Manager.instance.export(job_id: 'rake')
   end
 
   desc "Scan the stash directory for new files"
   task scan: :environment do
-    Stash::Manager.instance.scan(job_id: 'rake')
+    Canister::Manager.instance.scan(job_id: 'rake')
   end
 
   desc "Generates sprites and a VTT file for scrubbing video"
   task generate_sprites: :environment do
-    Stash::Manager.instance.generate(
+    Canister::Manager.instance.generate(
       job_id: 'rake',
       sprites: true,
       previews: false,
@@ -28,7 +28,7 @@ namespace :metadata do
 
   desc "Generates webm files for mouseover previews"
   task generate_previews: :environment do
-    Stash::Manager.instance.generate(
+    Canister::Manager.instance.generate(
       job_id: 'rake',
       sprites: false,
       previews: true,
@@ -39,7 +39,7 @@ namespace :metadata do
 
   desc "Generates transcodes for videos that dont support HTML5 video"
   task generate_transcodes: :environment do
-    Stash::Manager.instance.generate(
+    Canister::Manager.instance.generate(
       job_id: 'rake',
       sprites: false,
       previews: false,
@@ -50,7 +50,7 @@ namespace :metadata do
 
   desc "Generates marker previews"
   task generate_marker_previews: :environment do
-    Stash::Manager.instance.generate(
+    Canister::Manager.instance.generate(
       job_id: 'rake',
       sprites: false,
       previews: false,
@@ -61,11 +61,11 @@ namespace :metadata do
 
   desc "Generates all"
   task generate_all: :environment do
-    Stash::Manager.instance.generate(job_id: 'rake')
+    Canister::Manager.instance.generate(job_id: 'rake')
   end
 
   desc "Cleanup generated files for missing scenes"
   task cleanup: :environment do
-    Stash::Manager.instance.clean(job_id: 'rake')
+    Canister::Manager.instance.clean(job_id: 'rake')
   end
 end

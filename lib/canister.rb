@@ -4,7 +4,7 @@ require "naturally"
 require_relative "canister/version"
 
 module Canister
-  STASH_DIRECTORY = File.expand_path(ENV["stash_directory"])
+  STASH_DIRECTORY = "/videos"
   STASH_METADATA_DIRECTORY = File.expand_path(ENV["stash_metadata_directory"])
   STASH_CACHE_DIRECTORY = File.expand_path(ENV["stash_cache_directory"])
   STASH_DOWNLOADS_DIRECTORY = File.expand_path(ENV["stash_downloads_directory"])

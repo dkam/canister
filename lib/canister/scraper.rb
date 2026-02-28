@@ -1,7 +1,7 @@
 require 'mechanize'
 require 'selenium-webdriver'
 
-module Stash::Scraper
+module Canister::Scraper
   class Base
   end
 
@@ -14,7 +14,7 @@ module Stash::Scraper
 
   class SeleniumScraper < Base
     def initialize(studio:, page: 1, action: :scrape)
-      @manager = Stash::Manager.instance
+      @manager = Canister::Manager.instance
 
       case action
       when String
@@ -28,7 +28,7 @@ module Stash::Scraper
       raise "Invalid action.  Use scrape, download, or populate." unless [:scrape, :download, :populate].include?(@action)
 
       unless @action == :populate
-        chrome_profile = File.join(Stash::STASH_METADATA_DIRECTORY, 'chrome')
+        chrome_profile = File.join(Canister::STASH_METADATA_DIRECTORY, 'chrome')
         options = Selenium::WebDriver::Chrome::Options.new(args: ["user-data-dir=#{chrome_profile}"]) #'headless',
         @driver = Selenium::WebDriver.for(:chrome, options: options)
         @driver.manage.timeouts.implicit_wait = 5
@@ -122,7 +122,7 @@ module Stash::Scraper
       def download_gallery(scraped_item)
         return if scraped_item.gallery_filename.blank?
 
-        path = File.join(Stash::STASH_DOWNLOADS_DIRECTORY, scraped_item.gallery_filename)
+        path = File.join(Canister::STASH_DOWNLOADS_DIRECTORY, scraped_item.gallery_filename)
         if File.exist?(path)
           @manager.info("Already downloaded #{scraped_item.gallery_filename}.")
         elsif !scraped_item.gallery.nil?
@@ -134,7 +134,7 @@ module Stash::Scraper
       end
 
       def download_scene(scraped_item)
-        path = File.join(Stash::STASH_DOWNLOADS_DIRECTORY, scraped_item.video_filename)
+        path = File.join(Canister::STASH_DOWNLOADS_DIRECTORY, scraped_item.video_filename)
         if File.exist?(path)
           @manager.info("Already downloaded #{scraped_item.video_filename}.")
         elsif !scraped_item.scene.nil?
@@ -148,7 +148,7 @@ module Stash::Scraper
     private
 
       def download_file(url:, threads: 3, filename: nil)
-        Dir.chdir(Stash::STASH_DOWNLOADS_DIRECTORY) do
+        Dir.chdir(Canister::STASH_DOWNLOADS_DIRECTORY) do
           output = filename.nil? ? " " : " -o '#{filename}' "
           cmd = "aria2c#{output}'#{curl_url(url: url)}' -R -x 16 -s #{threads} --file-allocation=none --summary-interval=0 #{aria_headers}"
           system(cmd)

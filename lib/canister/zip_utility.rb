@@ -1,9 +1,9 @@
-module Stash::ZipUtility
+module Canister::ZipUtility
 
   def self.get_image(gallery:, index:)
     extract(gallery)
     file = gallery.files[index]
-    return File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum, file.name)
+    return File.join(Canister::STASH_CACHE_DIRECTORY, gallery.checksum, file.name)
   end
 
   def self.get_thumbnail(gallery:, index:)
@@ -12,10 +12,10 @@ module Stash::ZipUtility
 
     basename = File.basename(file.name, '.*')
     thumbnail_name = file.name.sub(basename, "#{basename}_thumb")
-    thumbnail_file_path = File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum, thumbnail_name)
+    thumbnail_file_path = File.join(Canister::STASH_CACHE_DIRECTORY, gallery.checksum, thumbnail_name)
     return thumbnail_file_path if File.exist?(thumbnail_file_path)
 
-    file_path = File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum, file.name)
+    file_path = File.join(Canister::STASH_CACHE_DIRECTORY, gallery.checksum, file.name)
     image = MiniMagick::Image.open(file_path)
     image.resize('512x512')
     image.write(thumbnail_file_path)
@@ -37,8 +37,8 @@ module Stash::ZipUtility
     end
 
     def self.extract(gallery)
-      gallery_cache_path = File.join(Stash::STASH_CACHE_DIRECTORY, gallery.checksum)
-      FileUtils.mkdir_p(Stash::STASH_CACHE_DIRECTORY) unless File.directory?(Stash::STASH_CACHE_DIRECTORY)
+      gallery_cache_path = File.join(Canister::STASH_CACHE_DIRECTORY, gallery.checksum)
+      FileUtils.mkdir_p(Canister::STASH_CACHE_DIRECTORY) unless File.directory?(Canister::STASH_CACHE_DIRECTORY)
       FileUtils.mkdir_p(gallery_cache_path) unless File.directory?(gallery_cache_path)
       return if Dir["#{gallery_cache_path}/**/*"].count == gallery.files.count
 

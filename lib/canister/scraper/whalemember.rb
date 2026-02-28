@@ -1,4 +1,4 @@
-class Stash::Scraper::Whalemember < Stash::Scraper::SeleniumScraper
+class Canister::Scraper::Whalemember < Canister::Scraper::SeleniumScraper
   def authenticated?
     begin
       !@driver.find_element(xpath: ".//a[contains(@href, 'login')]")

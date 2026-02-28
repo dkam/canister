@@ -1,11 +1,11 @@
-class Stash::Tasks::GenerateTranscode < Stash::Tasks::Base
+class Canister::Tasks::GenerateTranscode < Canister::Tasks::Base
   def initialize(scene:)
     super()
     @scene = scene
   end
 
   def start
-    return if Stash::VALID_HTML5_CODECS.include?(@scene.video_codec)
+    return if Canister::VALID_HTML5_CODECS.include?(@scene.video_codec)
     return if has_transcode?
     create_folders
 
@@ -29,17 +29,17 @@ class Stash::Tasks::GenerateTranscode < Stash::Tasks::Base
   private
 
     def create_folders
-      FileUtils.mkdir_p(Stash::STASH_TRANSCODE_DIRECTORY) unless File.directory?(Stash::STASH_TRANSCODE_DIRECTORY)
-      temp_folder = File.join(Stash::STASH_TRANSCODE_DIRECTORY, 'tmp')
+      FileUtils.mkdir_p(Canister::STASH_TRANSCODE_DIRECTORY) unless File.directory?(Canister::STASH_TRANSCODE_DIRECTORY)
+      temp_folder = File.join(Canister::STASH_TRANSCODE_DIRECTORY, 'tmp')
       FileUtils.mkdir_p(temp_folder) unless File.directory?(temp_folder)
     end
 
     def temp_path
-      File.join(Stash::STASH_TRANSCODE_DIRECTORY, 'tmp', "#{@scene.checksum}.mp4")
+      File.join(Canister::STASH_TRANSCODE_DIRECTORY, 'tmp', "#{@scene.checksum}.mp4")
     end
 
     def transcode_path
-      File.join(Stash::STASH_TRANSCODE_DIRECTORY, "#{@scene.checksum}.mp4")
+      File.join(Canister::STASH_TRANSCODE_DIRECTORY, "#{@scene.checksum}.mp4")
     end
 
     def has_transcode?

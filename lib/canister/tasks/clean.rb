@@ -1,13 +1,13 @@
-class Stash::Tasks::Clean < Stash::Tasks::Base
+class Canister::Tasks::Clean < Canister::Tasks::Base
   def initialize
     super()
   end
 
   def start
     remove_deleted
-    clean_directory(Stash::STASH_SCREENSHOTS_DIRECTORY)
-    clean_directory(Stash::STASH_VTT_DIRECTORY)
-    clean_directory(Stash::STASH_TRANSCODE_DIRECTORY)
+    clean_directory(Canister::STASH_SCREENSHOTS_DIRECTORY)
+    clean_directory(Canister::STASH_VTT_DIRECTORY)
+    clean_directory(Canister::STASH_TRANSCODE_DIRECTORY)
     return nil
   end
 

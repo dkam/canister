@@ -1,7 +1,7 @@
 require 'streamio-ffmpeg'
 require 'fastimage'
 
-module Stash::Movie
+module Canister::Movie
   def self.screenshot(path:, seconds: nil, width: nil)
     movie = FFMPEG::Movie.new(path)
 

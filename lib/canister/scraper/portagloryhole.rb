@@ -1,4 +1,4 @@
-class Stash::Scraper::Portagloryhole < Stash::Scraper::SeleniumScraper
+class Canister::Scraper::Portagloryhole < Canister::Scraper::SeleniumScraper
   def authenticated?
     begin
       @driver.browser.switch_to.alert

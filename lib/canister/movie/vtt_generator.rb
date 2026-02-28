@@ -1,4 +1,4 @@
-class Stash::Movie::VTTGenerator < Stash::Movie::Base
+class Canister::Movie::VTTGenerator < Canister::Movie::Base
   def initialize(path:, sprite_filename:, vtt_filename:, output_directory:)
     super(path: path)
 

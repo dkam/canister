@@ -1,7 +1,7 @@
 require 'singleton'
 require 'rake'
 
-class Stash::Manager
+class Canister::Manager
   include Singleton
 
   attr_reader :job_id
@@ -37,7 +37,7 @@ class Stash::Manager
         Rake::Task['db:migrate'].invoke
       end
 
-      Stash::Tasks::Import.new.start
+      Canister::Tasks::Import.new.start
     }
 
     idle
@@ -52,7 +52,7 @@ class Stash::Manager
     @rake = rake
 
     try {
-      Stash::Tasks::Export.new.start
+      Canister::Tasks::Export.new.start
     }
 
     idle
@@ -66,7 +66,7 @@ class Stash::Manager
     @logs = []
     @rake = rake
 
-    glob_path = File.join(Stash::STASH_DIRECTORY, "**", "*.{zip,m4v,mp4,mov,wmv}")
+    glob_path = File.join(Canister::STASH_DIRECTORY, "**", "*.{zip,m4v,mp4,mov,wmv}")
     scan_paths = Dir[glob_path]
     @current = 0
     @total = scan_paths.count
@@ -74,7 +74,7 @@ class Stash::Manager
     scan_paths.each { |path|
       @current += 1
       try {
-        scan_task = Stash::Tasks::Scan.new(path: path)
+        scan_task = Canister::Tasks::Scan.new(path: path)
         scan_task.start
       }
     }
@@ -103,28 +103,28 @@ class Stash::Manager
 
       if transcodes
         try {
-          transcode_task = Stash::Tasks::GenerateTranscode.new(scene: scene)
+          transcode_task = Canister::Tasks::GenerateTranscode.new(scene: scene)
           transcode_task.start
         }
       end
 
       if sprites
         try {
-          sprite_task = Stash::Tasks::GenerateSprite.new(scene: scene)
+          sprite_task = Canister::Tasks::GenerateSprite.new(scene: scene)
           sprite_task.start
         }
       end
 
       if previews
         try {
-          preview_task = Stash::Tasks::GeneratePreview.new(scene: scene)
+          preview_task = Canister::Tasks::GeneratePreview.new(scene: scene)
           preview_task.start
         }
       end
 
       if markers
         try {
-          marker_task = Stash::Tasks::GenerateMarkers.new(scene: scene)
+          marker_task = Canister::Tasks::GenerateMarkers.new(scene: scene)
           marker_task.start
         }
       end
@@ -143,7 +143,7 @@ class Stash::Manager
 
     try {
       # TODO: Clean up more and add progress
-      Stash::Tasks::Clean.new.start
+      Canister::Tasks::Clean.new.start
     }
 
     idle
@@ -173,22 +173,22 @@ class Stash::Manager
   # Logging
 
   def info(message)
-    Stash.logger.info(message)
+    Canister.logger.info(message)
     add_log(type: :info, message: message)
   end
 
   def debug(message)
-    Stash.logger.debug(message)
+    Canister.logger.debug(message)
     add_log(type: :debug, message: message)
   end
 
   def warn(message)
-    Stash.logger.warn(message)
+    Canister.logger.warn(message)
     add_log(type: :warn, message: message)
   end
 
   def error(message)
-    Stash.logger.error(message)
+    Canister.logger.error(message)
     add_log(type: :error, message: message)
   end
 

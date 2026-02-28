@@ -1,4 +1,4 @@
-class Stash::Movie::PreviewGenerator < Stash::Movie::Base
+class Canister::Movie::PreviewGenerator < Canister::Movie::Base
   def initialize(path:, video_filename:, image_filename:, output_directory:)
     @width = 640
     @video_filename = video_filename
@@ -32,7 +32,7 @@ class Stash::Movie::PreviewGenerator < Stash::Movie::Base
     end
 
     def transcode_path
-      File.join(Stash::STASH_TRANSCODE_DIRECTORY, @video_filename)
+      File.join(Canister::STASH_TRANSCODE_DIRECTORY, @video_filename)
     end
 
     def temp_path

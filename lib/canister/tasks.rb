@@ -1,7 +1,7 @@
-module Stash::Tasks
+module Canister::Tasks
   class Base
     def initialize
-      @manager = Stash::Manager.instance
+      @manager = Canister::Manager.instance
     end
   end
 end

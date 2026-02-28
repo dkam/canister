@@ -118,6 +118,11 @@
                 <span class="font-mono text-xs text-gray-400 w-12 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
                   <%= format_duration(marker.seconds) %>
                 </span>
+                <% if marker.end_seconds.present? %>
+                  <span class="font-mono text-xs text-gray-400 shrink-0">
+                    → <%= format_duration(marker.end_seconds) %>
+                  </span>
+                <% end %>
                 <span class="text-gray-700 dark:text-gray-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 truncate"><%= marker.title %></span>
                 <span class="text-xs text-indigo-400 dark:text-indigo-300 ml-auto shrink-0"><%= marker.primary_tag.name %></span>
               </button>

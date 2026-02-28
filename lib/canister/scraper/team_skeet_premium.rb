@@ -1,4 +1,4 @@
-class Stash::Scraper::TeamSkeetPremium < Stash::Scraper::SeleniumScraper
+class Canister::Scraper::TeamSkeetPremium < Canister::Scraper::SeleniumScraper
   def authenticated?
     return !@driver.title.include?('Login')
   end

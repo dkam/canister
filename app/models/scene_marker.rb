@@ -89,10 +89,10 @@ class SceneMarker < ApplicationRecord
   }
 
   def stream_file_path
-    File.join(Stash::STASH_MARKERS_DIRECTORY, scene.checksum, "#{seconds.to_i}.mp4")
+    File.join(Canister::STASH_MARKERS_DIRECTORY, scene.checksum, "#{seconds.to_i}.mp4")
   end
 
   def stream_preview_path
-    File.join(Stash::STASH_MARKERS_DIRECTORY, scene.checksum, "#{seconds.to_i}.webp")
+    File.join(Canister::STASH_MARKERS_DIRECTORY, scene.checksum, "#{seconds.to_i}.webp")
   end
 end

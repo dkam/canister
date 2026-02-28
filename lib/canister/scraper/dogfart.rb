@@ -1,4 +1,4 @@
-class Stash::Scraper::Dogfart < Stash::Scraper::SeleniumScraper
+class Canister::Scraper::Dogfart < Canister::Scraper::SeleniumScraper
   def authenticated?
     return !@driver.title.include?('Login')
   end

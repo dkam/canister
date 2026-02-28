@@ -8,6 +8,6 @@ class Gallery < ApplicationRecord
   scope :unowned_in_path, -> (path) { unowned.where('path like ?', "%#{path}%") }
 
   def files
-    Stash::ZipUtility.get_files(self.path)
+    Canister::ZipUtility.get_files(self.path)
   end
 end

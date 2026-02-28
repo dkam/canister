@@ -1,4 +1,4 @@
-class Stash::Tasks::Scan < Stash::Tasks::Base
+class Canister::Tasks::Scan < Canister::Tasks::Base
   def initialize(path:)
     super()
     @path = path
@@ -6,7 +6,7 @@ class Stash::Tasks::Scan < Stash::Tasks::Base
 
   def start
     create_folders
-    @manager = Stash::Manager.instance
+    @manager = Canister::Manager.instance
     @klass = path_class
 
     item = @klass.find_by(path: @path)
@@ -54,8 +54,8 @@ class Stash::Tasks::Scan < Stash::Tasks::Base
   private
 
     def create_folders
-      FileUtils.mkdir_p(Stash::STASH_SCREENSHOTS_DIRECTORY) unless File.directory?(Stash::STASH_SCREENSHOTS_DIRECTORY)
-      tmp_dir = File.join(Stash::STASH_SCREENSHOTS_DIRECTORY, 'tmp')
+      FileUtils.mkdir_p(Canister::STASH_SCREENSHOTS_DIRECTORY) unless File.directory?(Canister::STASH_SCREENSHOTS_DIRECTORY)
+      tmp_dir = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, 'tmp')
       FileUtils.mkdir_p(tmp_dir) unless File.directory?(tmp_dir)
     end
 
@@ -75,8 +75,8 @@ class Stash::Tasks::Scan < Stash::Tasks::Base
     end
 
     def make_screenshots(path:, checksum:)
-      thumb_path = File.join(Stash::STASH_SCREENSHOTS_DIRECTORY, "#{checksum}.thumb.jpg")
-      normal_path = File.join(Stash::STASH_SCREENSHOTS_DIRECTORY, "#{checksum}.jpg")
+      thumb_path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{checksum}.thumb.jpg")
+      normal_path = File.join(Canister::STASH_SCREENSHOTS_DIRECTORY, "#{checksum}.jpg")
 
       if File.exist?(thumb_path) && File.exist?(normal_path)
         # Screenshots already exist for this path... skipping

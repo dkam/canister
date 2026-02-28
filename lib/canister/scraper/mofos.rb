@@ -1,4 +1,4 @@
-class Stash::Scraper::Mofos < Stash::Scraper::SeleniumScraper
+class Canister::Scraper::Mofos < Canister::Scraper::SeleniumScraper
   def authenticated?
     return !@driver.current_url.include?('login')
   end

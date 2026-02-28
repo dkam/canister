@@ -1,6 +1,6 @@
-class Stash::Movie::Base
+class Canister::Movie::Base
   def initialize(path:)
-    @manager = Stash::Manager.instance
+    @manager = Canister::Manager.instance
     @path = path
     @info = FFMPEG::Movie.new(@path)
     raise Errno::ENOENT, "The file '#{@path}' does not exist" unless File.exist?(@path)
