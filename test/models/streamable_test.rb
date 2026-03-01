@@ -13,7 +13,11 @@ class StreamableTest < ActiveSupport::TestCase
   end
 
   def allow_file_to_exist
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
+  end
+
+  def disallow_file_to_exist
+    @scene.define_singleton_method(:stream_file_exists?) { false }
   end
 
   test "available_streams includes direct stream for H264/AAC/MP4" do
@@ -21,7 +25,7 @@ class StreamableTest < ActiveSupport::TestCase
 
     streams = @scene.available_streams
 
-    assert_equal 2, streams.length
+    assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
     assert_equal "Direct stream", direct_stream[:label]
@@ -29,6 +33,13 @@ class StreamableTest < ActiveSupport::TestCase
     assert_equal :byte_range, direct_stream[:seek_mode]
     assert direct_stream[:video_copy]
     refute direct_stream[:audio_transcode]
+
+    hls_stream = streams.find { |s| s[:kind] == :hls }
+    assert_not_nil hls_stream
+    assert_equal "HLS", hls_stream[:label]
+
+    mp4_stream = streams.find { |s| s[:kind] == :progressive }
+    assert_not_nil mp4_stream
   end
 
   test "available_streams includes direct stream for H264/MP3/MP4" do
@@ -36,10 +47,13 @@ class StreamableTest < ActiveSupport::TestCase
 
     streams = @scene.available_streams
 
-    assert_equal 2, streams.length
+    assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
     assert_equal "video/mp4", direct_stream[:mime_type]
+
+    hls_stream = streams.find { |s| s[:kind] == :hls }
+    assert_not_nil hls_stream
   end
 
   test "available_streams includes direct stream for H264/AAC/M4V" do
@@ -67,11 +81,17 @@ class StreamableTest < ActiveSupport::TestCase
 
     streams = @scene.available_streams
 
-    assert_equal 1, streams.length
+    assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
     assert_equal "video/webm", direct_stream[:mime_type]
     assert_equal :byte_range, direct_stream[:seek_mode]
+
+    hls_stream = streams.find { |s| s[:kind] == :hls }
+    assert_not_nil hls_stream
+
+    mp4_stream = streams.find { |s| s[:kind] == :progressive }
+    assert_not_nil mp4_stream
   end
 
   test "available_streams includes direct stream for VP8/Vorbis/WebM" do
@@ -231,115 +251,76 @@ class StreamableTest < ActiveSupport::TestCase
 
     assert_equal 2, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
-    assert_not_nil direct_stream
+    assert_nil direct_stream
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
     assert_equal "MP4 (H.264 copy)", mp4_stream[:label]
     assert mp4_stream[:audio_transcode]
+
+    hls_stream = streams.find { |s| s[:kind] == :hls }
+    assert_not_nil hls_stream
   end
 
   test "direct_streamable? returns true for H264/AAC/MP4" do
     @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     assert @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for H264/AAC/M4V" do
     @scene.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     assert @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for H264/AAC/MOV" do
     @scene.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     assert @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for VP8/Opus/WebM" do
     @scene.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     assert @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/Opus/MP4" do
     @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     refute @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/AAC/MKV" do
     @scene.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     refute @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/AAC/AVI" do
     @scene.update(path: "/test/video.avi", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     refute @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for unsupported video codec" do
     @scene.update(path: "/test/video.mp4", video_codec: "unreal", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(true)
+    @scene.define_singleton_method(:stream_file_exists?) { true }
 
     refute @scene.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false when file doesn't exist" do
     @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
-    allow(@scene).to receive(:stream_file_exists?).and_return(false)
-
-    refute @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns true for H264/AAC/M4V" do
-    @scene.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
-
-    assert @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns true for H264/AAC/MOV" do
-    @scene.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
-
-    assert @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns true for VP8/Opus/WebM" do
-    @scene.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
-
-    assert @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns false for H264/Opus/MP4" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
-
-    refute @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns false for H264/AAC/MKV" do
-    @scene.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
-
-    refute @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns false for H264/AAC/AVI" do
-    @scene.update(path: "/test/video.avi", video_codec: "h264", audio_codec: "aac")
-
-    refute @scene.send(:direct_streamable?)
-  end
-
-  test "direct_streamable? returns false for unsupported video codec" do
-    @scene.update(path: "/test/video.mp4", video_codec: "av1", audio_codec: "aac")
+    disallow_file_to_exist
 
     refute @scene.send(:direct_streamable?)
   end

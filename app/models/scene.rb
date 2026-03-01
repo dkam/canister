@@ -58,7 +58,7 @@ class Scene < ApplicationRecord
   scope :studio_id, ->(studio_id) { where studio_id: studio_id }
   scope :tag_id, ->(tag_id) { joins(:tags).where("tags.id = ?", tag_id).distinct }
   scope :tags, ->(tag_ids) {
-    tag_ids = tag_ids.map { |id| id.to_i }.uniq
+    tag_ids = tag_ids.uniq
 
     joins(:tags)
       .where(tags: {id: tag_ids})

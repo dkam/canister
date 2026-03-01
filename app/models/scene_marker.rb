@@ -25,7 +25,7 @@ class SceneMarker < ApplicationRecord
   end
 
   scope :tags, ->(tag_ids) {
-    tag_ids = tag_ids.map { |id| id.to_i }.uniq
+    tag_ids = tag_ids.uniq
 
     markers = left_outer_joins(:tags)
       .where(scene_markers: {primary_tag_id: tag_ids})
@@ -60,7 +60,7 @@ class SceneMarker < ApplicationRecord
   }
 
   scope :scene_tags, ->(scene_tag_ids) {
-    tag_ids = scene_tag_ids.map { |id| id.to_i }.uniq
+    tag_ids = scene_tag_ids.uniq
 
     left_outer_joins(scene: [:tags])
       .where(scene: {taggings: {tag_id: tag_ids}})
@@ -70,8 +70,8 @@ class SceneMarker < ApplicationRecord
   }
 
   scope :marker_and_scene_tags, ->(marker_tag_ids, scene_tag_ids) {
-    scene_tag_ids = scene_tag_ids.map { |id| id.to_i }.uniq
-    marker_tag_ids = marker_tag_ids.map { |id| id.to_i }.uniq
+    scene_tag_ids = scene_tag_ids.uniq
+    marker_tag_ids = marker_tag_ids.uniq
 
     scene = scene_tags(scene_tag_ids)
     marker = tags(marker_tag_ids)
@@ -81,7 +81,7 @@ class SceneMarker < ApplicationRecord
   }
 
   scope :performers, ->(scene_performer_ids) {
-    performer_ids = scene_performer_ids.map { |id| id.to_i }.uniq
+    performer_ids = scene_performer_ids.uniq
 
     left_outer_joins(scene: [:performers])
       .where(scene: {performers: {id: performer_ids}})

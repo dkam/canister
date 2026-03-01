@@ -62,23 +62,30 @@ class Scenes::StreamsController < ApplicationController
     response.stream.close
   end
 
-  # HLS manifest — reuses existing segments/manifest if present, otherwise starts FFmpeg
+  # HLS manifest — three-tier resolution:
+  #   1. Stored timestamps (remux only) — serve immediately, restart FFmpeg only if segments gone
+  #   2. FFmpeg manifest on disk — reuse live/completed manifest
+  #   3. Fresh start — calculated fallback while FFmpeg runs
   def stream_hls
     stream_config = @scene.available_streams.find { |s| s[:kind] == :hls }
     return head :not_found unless stream_config
 
-    tmp_dir = hls_tmp_dir
+    tmp_dir         = hls_tmp_dir
     ffmpeg_manifest = tmp_dir.join("manifest.m3u8")
 
-    if ffmpeg_manifest.exist?
-      # Segments exist from a previous (or current) FFmpeg run — reuse them.
-      # If FFmpeg is still running it will keep adding segments; if done, they're all there.
-      manifest = rewrite_ffmpeg_manifest(ffmpeg_manifest)
+    manifest = if @scene.hls_segment_durations.present? && stream_config[:video_copy]
+      durations = @scene.hls_segment_durations
+      unless tmp_dir.join("0.ts").exist?
+        FileUtils.mkdir_p(tmp_dir)
+        start_hls_ffmpeg(stream_config, tmp_dir)
+      end
+      build_manifest_from_durations(durations)
+    elsif ffmpeg_manifest.exist?
+      rewrite_ffmpeg_manifest(ffmpeg_manifest)
     else
-      # Fresh start — no rm_rf, just mkdir_p
       FileUtils.mkdir_p(tmp_dir)
       start_hls_ffmpeg(stream_config, tmp_dir)
-      manifest = generate_m3u8  # calculated fallback while FFmpeg runs
+      generate_m3u8
     end
 
     render plain: manifest, content_type: "application/vnd.apple.mpegurl"
@@ -156,6 +163,7 @@ class Scenes::StreamsController < ApplicationController
     ensure
       done = true
       watcher&.join
+      save_hls_timestamps(tmp_dir, config)
       HLS_RUNNING.synchronize { HLS_PIDS.delete(@scene.id) }
     end
   end
@@ -228,6 +236,46 @@ class Scenes::StreamsController < ApplicationController
 
     lines << "#EXT-X-ENDLIST"
     lines.join("\n")
+  end
+
+  # Build manifest from previously stored #EXTINF durations (remux streams only).
+  def build_manifest_from_durations(durations)
+    lines = [
+      "#EXTM3U",
+      "#EXT-X-VERSION:3",
+      "#EXT-X-MEDIA-SEQUENCE:0",
+      "#EXT-X-TARGETDURATION:#{durations.max.ceil}",
+      "#EXT-X-PLAYLIST-TYPE:VOD"
+    ]
+
+    durations.each_with_index do |d, i|
+      lines << "#EXTINF:#{format("%.3f", d)},"
+      lines << stream_hls_segment_scene_url(@scene, segment: i)
+    end
+
+    lines << "#EXT-X-ENDLIST"
+    lines.join("\n")
+  end
+
+  # Parse FFmpeg's completed manifest and persist #EXTINF durations for remux streams.
+  # Idempotent — skips if durations are already stored.
+  def save_hls_timestamps(tmp_dir, config)
+    return unless config[:video_copy]
+    return if Scene.where(id: @scene.id).where.not(hls_segment_durations: nil).exists?
+
+    manifest_path = tmp_dir.join("manifest.m3u8")
+    return unless manifest_path.exist?
+
+    durations = []
+    File.foreach(manifest_path) do |line|
+      if (m = line.match(/#EXTINF:([\d.]+),/))
+        durations << m[1].to_f
+      end
+    end
+    return if durations.empty?
+
+    Scene.find(@scene.id).update_column(:hls_segment_durations, durations)
+    Rails.logger.info "HLS: saved #{durations.size} timestamps for scene #{@scene.id}"
   end
 
   def build_ffmpeg_command(config, start_time)
