@@ -5,7 +5,7 @@ class ScenesController < ApplicationController
   def index
     @scenes = Scene.filter(scene_filter_params) if scene_filter_params.any?
     @scenes ||= Scene.all
-    @scenes = @scenes.includes(:studio, :performers)
+    @scenes = @scenes.includes(:studio, :performers).order(created_at: :desc)
 
     if params[:sort].present?
       allowed = %w[title date rating duration path]
@@ -76,9 +76,7 @@ class ScenesController < ApplicationController
     # Try to find by UUID first
     @scene = Scene.find_by(id: params[:id])
     # If not found by UUID, try finding by any checksum
-    @scene ||= Checksum.joins(:hashable)
-      .find_by(hash_value: params[:id], hashable_type: "Scene")
-      &.hashable
+    @scene ||= Checksum.find_by(hash_value: params[:id], hashable_type: "Scene")&.hashable
 
     raise ActiveRecord::RecordNotFound unless @scene
   end

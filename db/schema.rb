@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_01_173955) do
   create_table "active_storage_attachments", id: :uuid, force: :cascade do |t|
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
@@ -82,7 +82,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
     t.string "aliases"
     t.date "birthdate"
     t.string "career_length"
-    t.string "checksum"
     t.string "country"
     t.datetime "created_at", null: false
     t.string "ethnicity"
@@ -90,7 +89,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
     t.string "fake_tits"
     t.boolean "favorite", default: false, null: false
     t.string "height"
-    t.binary "image", limit: 2097152
     t.string "instagram"
     t.string "measurements"
     t.string "name"
@@ -99,7 +97,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
     t.string "twitter"
     t.datetime "updated_at", null: false
     t.string "url"
-    t.index ["checksum"], name: "index_performers_on_checksum"
     t.index ["name"], name: "index_performers_on_name"
   end
 
@@ -175,13 +172,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
   end
 
   create_table "studios", id: :uuid, force: :cascade do |t|
-    t.string "checksum"
     t.datetime "created_at", null: false
-    t.binary "image", limit: 1048576
     t.string "name"
     t.datetime "updated_at", null: false
     t.string "url"
-    t.index ["checksum"], name: "index_studios_on_checksum"
     t.index ["name"], name: "index_studios_on_name"
   end
 

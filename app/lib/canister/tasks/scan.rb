@@ -19,13 +19,9 @@ class Canister::Tasks::Scan < Canister::Tasks::Base
 
     # Check for existing item by opensubtitles hash (scenes) or xxhash (galleries)
     existing_item = if @klass == Scene
-      Checksum.joins(:hashable)
-        .find_by(hash_value: checksums[:opensubtitles], checksum_type: :opensubtitles, hashable_type: "Scene")
-        &.hashable
+      Checksum.find_by(hash_value: checksums[:opensubtitles], checksum_type: :opensubtitles, hashable_type: "Scene")&.hashable
     else
-      Checksum.joins(:hashable)
-        .find_by(hash_value: checksums[:xxhash], checksum_type: :xxhash, hashable_type: "Gallery")
-        &.hashable
+      Checksum.find_by(hash_value: checksums[:xxhash], checksum_type: :xxhash, hashable_type: "Gallery")&.hashable
     end
 
     if existing_item
@@ -48,17 +44,13 @@ class Canister::Tasks::Scan < Canister::Tasks::Base
       item.height = video.height
       item.framerate = video.frame_rate
       item.bitrate = video.bitrate
+      item.checksums.build(checksum_type: :opensubtitles, hash_value: checksums[:opensubtitles])
+      item.checksums.build(checksum_type: :xxhash, hash_value: checksums[:xxhash])
+    else
+      item.checksums.build(checksum_type: :xxhash, hash_value: checksums[:xxhash])
     end
 
     item.save!
-
-    # Create checksum records
-    if @klass == Scene
-      Checksum.create!(hashable: item, checksum_type: :opensubtitles, hash_value: checksums[:opensubtitles])
-      Checksum.create!(hashable: item, checksum_type: :xxhash, hash_value: checksums[:xxhash])
-    else
-      Checksum.create!(hashable: item, checksum_type: :xxhash, hash_value: checksums[:xxhash])
-    end
 
     begin
       make_screenshot(item) if @klass == Scene
@@ -78,7 +70,7 @@ class Canister::Tasks::Scan < Canister::Tasks::Base
   def calculate_checksum
     @manager.info("#{@path} not found.  Calculating checksums...")
 
-    require_relative "../../../open_subtitles_hash"
+    require "open_subtitles_hash"
 
     # For scenes: calculate both opensubtitles and xxhash
     if @klass == Scene

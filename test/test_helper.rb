@@ -1,6 +1,6 @@
-ENV['RAILS_ENV'] ||= 'test'
-require File.expand_path('../../config/environment', __FILE__)
-require 'rails/test_help'
+ENV["RAILS_ENV"] ||= "test"
+require File.expand_path("../../config/environment", __FILE__)
+require "rails/test_help"
 
 class ActiveSupport::TestCase
   # Setup all fixtures in test/fixtures/*.yml for all tests in alphabetical order.
@@ -19,7 +19,7 @@ module FixturesTestHelper
         label = label.to_s.delete_suffix("_uuid")
       end
 
-      return super(label, column_type) unless column_type.in?([:uuid, :string])
+      return super unless column_type.in?([:uuid, :string])
       generate_fixture_uuid(label)
     end
 
@@ -76,4 +76,9 @@ end
 
 ActiveSupport.on_load(:active_record_fixture_set) do
   prepend(FixturesTestHelper)
+end
+
+# For tests that don't need fixtures (e.g., testing concerns)
+class ActiveSupport::TestCaseWithoutFixtures < ActiveSupport::TestCase
+  self.use_transactional_tests = false
 end

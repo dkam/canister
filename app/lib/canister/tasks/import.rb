@@ -53,6 +53,8 @@ class Canister::Tasks::Import < Canister::Tasks::Base
 
   def import_performers
     performers = []
+    images = {}
+
     @mappings["performers"].each.with_index(1) { |performerJSON, index|
       id = performerJSON["id"]
       name = performerJSON["name"]
@@ -78,13 +80,30 @@ class Canister::Tasks::Import < Canister::Tasks::Base
       performer.piercings = json["piercings"]
       performer.aliases = json["aliases"]
       performer.favorite = json["favorite"]
-      performer.image = Base64.decode64(json["image"])
 
+      images[id] = json["image"] if json["image"].present?
       performers.push(performer)
     }
 
     @manager.info("Importing performers...")
-    Performer.import(performers)
+    Performer.import(performers, validate: false)
+
+    @manager.info("Attaching performer images...")
+    images.each do |id, base64_data|
+      performer = Performer.find_by(id: id)
+      next unless performer
+
+      decoded = Base64.decode64(base64_data)
+      mime_type = detect_mime(decoded)
+      extension = mime_type.split("/").last
+
+      performer.image.attach(
+        io: StringIO.new(decoded),
+        filename: "performer_#{id}.#{extension}",
+        content_type: mime_type
+      )
+    end
+
     @manager.info("Performer import complete")
   end
 
@@ -92,6 +111,8 @@ class Canister::Tasks::Import < Canister::Tasks::Base
     return unless @mappings["studios"]
 
     studios = []
+    images = {}
+
     @mappings["studios"].each.with_index(1) { |studioJSON, index|
       id = studioJSON["id"]
       name = studioJSON["name"]
@@ -103,13 +124,30 @@ class Canister::Tasks::Import < Canister::Tasks::Base
       studio = Studio.new(id: id)
       studio.name = name
       studio.url = json["url"]
-      studio.image = Base64.decode64(json["image"])
 
+      images[id] = json["image"] if json["image"].present?
       studios.push(studio)
     }
 
     @manager.info("Importing studios...")
-    Studio.import(studios)
+    Studio.import(studios, validate: false)
+
+    @manager.info("Attaching studio images...")
+    images.each do |id, base64_data|
+      studio = Studio.find_by(id: id)
+      next unless studio
+
+      decoded = Base64.decode64(base64_data)
+      mime_type = detect_mime(decoded)
+      extension = mime_type.split("/").last
+
+      studio.image.attach(
+        io: StringIO.new(decoded),
+        filename: "studio_#{id}.#{extension}",
+        content_type: mime_type
+      )
+    end
+
     @manager.info("Studio import complete")
   end
 
@@ -334,5 +372,16 @@ class Canister::Tasks::Import < Canister::Tasks::Base
     }
 
     performers
+  end
+
+  def detect_mime(data)
+    return "image/jpeg" unless data
+    if data[0, 4] == "\x89PNG".b
+      "image/png"
+    elsif data[0, 2] == "\xFF\xD8".b
+      "image/jpeg"
+    else
+      "image/jpeg"
+    end
   end
 end

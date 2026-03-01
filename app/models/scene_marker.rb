@@ -5,7 +5,6 @@ class SceneMarker < ApplicationRecord
   belongs_to :primary_tag, class_name: "Tag"
 
   belongs_to :scene, touch: true
-  default_scope { order(seconds: :asc) }
 
   scoped_search on: [:title, :scene_id]
   scoped_search relation: :scene, on: :title
@@ -37,14 +36,12 @@ class SceneMarker < ApplicationRecord
           .where(tags: {id: tag_ids})
           .group("scene_markers.id")
           .having("count(taggings.tag_id) = #{tag_ids.length}")
-          .unscope(:order)
           .distinct
     else
       ids += left_outer_joins(:tags)
         .where(tags: {id: tag_ids})
         .group("scene_markers.id")
         .having("count(taggings.tag_id) = #{tag_ids.length}")
-        .unscope(:order)
         .distinct
         .pluck(:id)
     end

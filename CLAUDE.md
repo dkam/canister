@@ -67,6 +67,8 @@ rails metadata:generate_all      # run all generate tasks
 
 Rails upgrade **complete** — now on Rails 8.1.2.
 Solid stack **complete** — Solid Cache, Solid Queue, Solid Cable in use (no Redis).
+UUIDv7 **complete** — all primary key `id` columns use UUIDv7. Stored as 16-byte binary (`blob(16)` in SQLite), exposed as 25-char base36 strings (e.g. `"01jcqzx8h0000000000000000"`). Custom type registered in `lib/rails_ext/active_record_uuid_type.rb`; generation via `SecureRandom.uuid_v7`. No `primary_key` declarations needed in models.
+HLS streaming **basic working** — HLS playback is functional.
 
 ### Next steps
 

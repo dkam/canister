@@ -10,6 +10,10 @@ class Gallery < ApplicationRecord
     checksums.first
   end
 
+  def checksum
+    checksum_value(type: :xxhash)
+  end
+
   def checksum_value(type: :xxhash)
     checksums.find_by(checksum_type: type)&.hash_value
   end

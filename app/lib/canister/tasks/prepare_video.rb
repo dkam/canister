@@ -1,5 +1,6 @@
-class Canister::Tasks::PrepareVideo
+class Canister::Tasks::PrepareVideo < Canister::Tasks::Base
   def initialize(scene:)
+    super()
     @scene = scene
   end
 
@@ -7,7 +8,7 @@ class Canister::Tasks::PrepareVideo
     return if has_transcode?
     return if Canister::VALID_HTML5_CODECS.include?(@scene.video_codec)
 
-    Rails.logger.info("[PrepareVideo] Transcoding Scene #{@scene.id} (#{@scene.video_codec})")
+    @manager.info("Transcoding Scene #{@scene.id} (#{@scene.video_codec})")
     transcode
   end
 

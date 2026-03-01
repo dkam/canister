@@ -9,7 +9,7 @@ class Scene < ApplicationRecord
   has_and_belongs_to_many :performers
   has_many :checksums, as: :hashable, dependent: :destroy
   has_one :gallery, as: :ownable, dependent: :nullify
-  has_many :scene_markers, dependent: :destroy
+  has_many :scene_markers, -> { order(seconds: :asc) }, dependent: :destroy
   has_many :screenshots, dependent: :destroy
   has_one_attached :preview_clip
   belongs_to :library, optional: true
@@ -19,7 +19,6 @@ class Scene < ApplicationRecord
   scoped_search relation: :checksums, on: :hash_value
   scoped_search relation: :scene_markers, on: :title
 
-  default_scope { order(path: :asc) }
   scope :filter_studios, ->(studio_ids) { where studio_id: studio_ids }
   scope :filter_performers, ->(performer_ids) { joins(:performers).where("performers.id IN (?)", performer_ids).distinct }
 
@@ -138,6 +137,10 @@ class Scene < ApplicationRecord
     checksums.find_by(checksum_type: :opensubtitles) || checksums.first
   end
 
+  def checksum
+    checksum_value(type: :opensubtitles) || checksum_value(type: :xxhash)
+  end
+
   def checksum_value(type: :opensubtitles)
     checksums.find_by(checksum_type: type)&.hash_value
   end
@@ -147,10 +150,6 @@ class Scene < ApplicationRecord
   end
 
   private
-
-  def get_vtt_time(seconds)
-    Time.at(seconds).gmtime.strftime("%H:%M:%S")
-  end
 
   def get_vtt_time(seconds)
     Time.at(seconds).gmtime.strftime("%H:%M:%S")

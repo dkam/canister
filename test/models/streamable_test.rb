@@ -1,14 +1,13 @@
 require "test_helper"
 
-class StreamableTest < ActiveSupport::TestCase
+class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   def setup
-    @scene = Scene.create!(
+    @scene = Scene.new(
       path: "/test/video.mp4",
       video_codec: "h264",
       audio_codec: "aac",
       title: "Test Scene"
     )
-    @scene.checksums.create!(checksum_type: :opensubtitles, hash_value: "test123")
     allow_file_to_exist
   end
 

@@ -1,14 +1,14 @@
 class Performer < ApplicationRecord
   include Filterable
 
+  has_one_attached :image
   has_and_belongs_to_many :scenes
   has_and_belongs_to_many :galleries
 
-  validate :image_exists
+  validate :image_attached
 
   scoped_search on: [:name, :birthdate, :ethnicity]
 
-  default_scope { order(name: :asc) }
   scope :filter_favorites, ->(favorite) { where(favorite: favorite) }
 
   def age(date: Date.today)
@@ -19,7 +19,7 @@ class Performer < ApplicationRecord
 
   private
 
-  def image_exists
-    errors.add(:image, "is empty") unless image
+  def image_attached
+    errors.add(:image, "is empty") unless image.attached?
   end
 end

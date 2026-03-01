@@ -102,7 +102,7 @@ class Canister::Tasks::Export < Canister::Tasks::Base
       json[:piercings] = performer.piercings if performer.piercings
       json[:aliases] = performer.aliases if performer.aliases
       json[:favorite] = performer.favorite
-      json[:image] = Base64.encode64(performer.image)
+      json[:image] = Base64.encode64(performer.image.download) if performer.image.attached?
 
       next if json.empty?
 
@@ -123,7 +123,7 @@ class Canister::Tasks::Export < Canister::Tasks::Base
       json = {}
       json[:name] = studio.name if studio.name
       json[:url] = studio.url if studio.url
-      json[:image] = Base64.encode64(studio.image)
+      json[:image] = Base64.encode64(studio.image.download) if studio.image.attached?
 
       next if json.empty?
 
