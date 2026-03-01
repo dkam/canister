@@ -7,7 +7,7 @@ class Canister::Tasks::PrepareVideo
     return if has_transcode?
     return if Canister::VALID_HTML5_CODECS.include?(@scene.video_codec)
 
-    Rails.logger.info("[PrepareVideo] Transcoding #{@scene.checksum} (#{@scene.video_codec})")
+    Rails.logger.info("[PrepareVideo] Transcoding Scene #{@scene.id} (#{@scene.video_codec})")
     transcode
   end
 
@@ -25,11 +25,11 @@ class Canister::Tasks::PrepareVideo
   end
 
   def temp_path
-    File.join(transcode_dir, "#{@scene.checksum}.tmp.mp4")
+    File.join(transcode_dir, "#{@scene.id}.tmp.mp4")
   end
 
   def transcode_path
-    File.join(transcode_dir, "#{@scene.checksum}.mp4")
+    File.join(transcode_dir, "#{@scene.id}.mp4")
   end
 
   def has_transcode?

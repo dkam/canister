@@ -8,7 +8,7 @@ class Canister::Tasks::GenerateMarkers < Canister::Tasks::Base
     return unless has_markers
     create_folders
 
-    @manager.info("#{@scene.checksum} has #{@scene.scene_markers.count} markers")
+    @manager.info("Scene #{@scene.id} has #{@scene.scene_markers.count} markers")
 
     output_width = 640
 
@@ -58,7 +58,7 @@ class Canister::Tasks::GenerateMarkers < Canister::Tasks::Base
   end
 
   def scene_markers_path
-    File.join(Canister::STASH_MARKERS_DIRECTORY, @scene.checksum)
+    File.join(Canister::STASH_MARKERS_DIRECTORY, @scene.id.to_s)
   end
 
   def has_markers

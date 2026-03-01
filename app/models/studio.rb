@@ -7,13 +7,12 @@ class Studio < ApplicationRecord
   default_scope { order(name: :asc) }
 
   # Validations
-  validates_presence_of :name, :checksum
-  validates_uniqueness_of :name, :checksum
+  validates :name, presence: true, uniqueness: true
   validate :image_exists
 
   private
 
-    def image_exists
-      errors.add(:image, "is empty") unless image
-    end
+  def image_exists
+    errors.add(:image, "is empty") unless image
+  end
 end

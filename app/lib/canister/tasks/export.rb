@@ -29,16 +29,17 @@ class Canister::Tasks::Export < Canister::Tasks::Base
   def export_scenes
     Scene.all.each do |scene|
       @manager.current += 1
-      @mappings[:scenes].push(path: scene.path, checksum: scene.checksum)
+      @mappings[:scenes].push(id: scene.id, path: scene.path)
 
       json = {}
+      json[:checksums] = scene.checksums.map { |c| {type: c.checksum_type, value: c.hash_value} }
       json[:title] = scene.title if scene.title
       json[:studio] = scene.studio.name if scene.studio && scene.studio.name
       json[:url] = scene.url if scene.url
       json[:date] = scene.date.to_s if scene.date
       json[:rating] = scene.rating if scene.rating
       json[:details] = scene.details if scene.details
-      json[:gallery] = scene.gallery.checksum if scene.gallery
+      json[:gallery_id] = scene.gallery.id if scene.gallery
       json[:performers] = get_names(scene.performers) unless get_names(scene.performers).empty?
       json[:tags] = get_names(scene.tags) unless get_names(scene.tags).empty?
 
@@ -46,6 +47,7 @@ class Canister::Tasks::Export < Canister::Tasks::Base
         json[:markers] = []
         scene.scene_markers.each { |marker|
           marker_json = {
+            id: marker.id,
             title: marker.title,
             seconds: marker.seconds,
             primary_tag: marker.primary_tag.name,
@@ -68,10 +70,12 @@ class Canister::Tasks::Export < Canister::Tasks::Base
       json[:file][:framerate] = scene.framerate
       json[:file][:bitrate] = scene.bitrate
 
-      sceneJSON = Canister::JSONUtility.scene(scene.checksum)
-      next if sceneJSON == json.as_json
+      sceneJSON_path = File.join(Canister::STASH_SCENES_DIRECTORY, "#{scene.id}.json")
 
-      Canister::JSONUtility.save_scene(checksum: scene.checksum, json: json)
+      existing_json = File.exist?(sceneJSON_path) ? JSON.parse(File.read(sceneJSON_path)) : nil
+      next if existing_json == json.as_json
+
+      Canister::JSONUtility.save_scene(id: scene.id, json: json)
     end
   end
 
@@ -79,7 +83,7 @@ class Canister::Tasks::Export < Canister::Tasks::Base
     clean_performers
     Performer.all.each do |performer|
       @manager.current += 1
-      @mappings[:performers].push(name: performer.name, checksum: performer.checksum)
+      @mappings[:performers].push(id: performer.id, name: performer.name)
 
       json = {}
       json[:name] = performer.name if performer.name
@@ -102,17 +106,19 @@ class Canister::Tasks::Export < Canister::Tasks::Base
 
       next if json.empty?
 
-      performerJSON = Canister::JSONUtility.performer(performer.checksum)
-      next if performerJSON && performerJSON == json.as_json
+      performerJSON_path = File.join(Canister::STASH_PERFORMERS_DIRECTORY, "#{performer.id}.json")
 
-      Canister::JSONUtility.save_performer(checksum: performer.checksum, json: json)
+      existing_json = File.exist?(performerJSON_path) ? JSON.parse(File.read(performerJSON_path)) : nil
+      next if existing_json == json.as_json
+
+      Canister::JSONUtility.save_performer(id: performer.id, json: json)
     end
   end
 
   def export_studios
     Studio.all.each do |studio|
       @manager.current += 1
-      @mappings[:studios].push(name: studio.name, checksum: studio.checksum)
+      @mappings[:studios].push(id: studio.id, name: studio.name)
 
       json = {}
       json[:name] = studio.name if studio.name
@@ -121,17 +127,19 @@ class Canister::Tasks::Export < Canister::Tasks::Base
 
       next if json.empty?
 
-      studioJSON = Canister::JSONUtility.studio(studio.checksum)
-      next if studioJSON && studioJSON == json.as_json
+      studioJSON_path = File.join(Canister::STASH_STUDIOS_DIRECTORY, "#{studio.id}.json")
 
-      Canister::JSONUtility.save_studio(checksum: studio.checksum, json: json)
+      existing_json = File.exist?(studioJSON_path) ? JSON.parse(File.read(studioJSON_path)) : nil
+      next if existing_json == json.as_json
+
+      Canister::JSONUtility.save_studio(id: studio.id, json: json)
     end
   end
 
   def export_galleries
     Gallery.all.each do |gallery|
       @manager.current += 1
-      @mappings[:galleries].push(path: gallery.path, checksum: gallery.checksum)
+      @mappings[:galleries].push(id: gallery.id, path: gallery.path)
 
       json = {}
       json[:title] = gallery.title if gallery.title
@@ -139,10 +147,12 @@ class Canister::Tasks::Export < Canister::Tasks::Base
 
       next if json.empty?
 
-      galleryJSON = Canister::JSONUtility.gallery(gallery.checksum)
-      next if galleryJSON == json.as_json
+      galleryJSON_path = File.join(Canister::STASH_GALLERIES_DIRECTORY, "#{gallery.id}.json")
 
-      Canister::JSONUtility.save_gallery(checksum: gallery.checksum, json: json)
+      existing_json = File.exist?(galleryJSON_path) ? JSON.parse(File.read(galleryJSON_path)) : nil
+      next if existing_json == json.as_json
+
+      Canister::JSONUtility.save_gallery(id: gallery.id, json: json)
     end
   end
 
@@ -184,11 +194,11 @@ class Canister::Tasks::Export < Canister::Tasks::Base
   def clean_performers
     glob = File.join(Canister::STASH_PERFORMERS_DIRECTORY, "*.json")
     Dir[glob].each do |path|
-      checksum = File.basename(path, ".json")
-      next if Performer.find_by(checksum: checksum)
+      id = File.basename(path, ".json")
+      next if Performer.find_by(id: id)
 
-      @manager.info("Performer cleanup removing #{checksum}")
-      File.delete(File.join(Canister::STASH_PERFORMERS_DIRECTORY, "#{checksum}.json"))
+      @manager.info("Performer cleanup removing #{id}")
+      File.delete(File.join(Canister::STASH_PERFORMERS_DIRECTORY, "#{id}.json"))
     end
   end
 end

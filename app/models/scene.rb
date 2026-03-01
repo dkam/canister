@@ -3,10 +3,11 @@ class Scene < ApplicationRecord
   include Streamable
   include Taggable
 
-  validates_presence_of :checksum, :path
-  validates_uniqueness_of :checksum, :path
+  validates :path, presence: true, uniqueness: true
+  validates :checksums, presence: true
 
   has_and_belongs_to_many :performers
+  has_many :checksums, as: :hashable, dependent: :destroy
   has_one :gallery, as: :ownable, dependent: :nullify
   has_many :scene_markers, dependent: :destroy
   has_many :screenshots, dependent: :destroy
@@ -14,7 +15,8 @@ class Scene < ApplicationRecord
   belongs_to :library, optional: true
   belongs_to :studio, optional: true, touch: true
 
-  scoped_search on: [:title, :details, :path, :checksum]
+  scoped_search on: [:title, :details, :path]
+  scoped_search relation: :checksums, on: :hash_value
   scoped_search relation: :scene_markers, on: :title
 
   default_scope { order(path: :asc) }
@@ -99,11 +101,11 @@ class Scene < ApplicationRecord
   end
 
   def transcode_path
-    File.join(Canister::TRANSCODE_DIRECTORY, "#{checksum}.mp4")
+    File.join(Canister::TRANSCODE_DIRECTORY, "#{id}.mp4")
   end
 
   def screenshot(seconds: nil, width: nil)
-    cache_key = "#{checksum}"
+    cache_key = "scene_#{id}"
     if seconds
       cache_key += "_#{seconds}"
     end
@@ -130,6 +132,18 @@ class Scene < ApplicationRecord
     end
 
     vtt.join("\n")
+  end
+
+  def primary_checksum
+    checksums.find_by(checksum_type: :opensubtitles) || checksums.first
+  end
+
+  def checksum_value(type: :opensubtitles)
+    checksums.find_by(checksum_type: type)&.hash_value
+  end
+
+  def checksums_by_type
+    checksums.group_by(&:checksum_type)
   end
 
   private

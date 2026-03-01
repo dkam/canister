@@ -54,15 +54,14 @@ class Canister::Tasks::Import < Canister::Tasks::Base
   def import_performers
     performers = []
     @mappings["performers"].each.with_index(1) { |performerJSON, index|
-      checksum = performerJSON["checksum"]
+      id = performerJSON["id"]
       name = performerJSON["name"]
-      json = Canister::JSONUtility.performer checksum
-      next unless checksum && name && json
+      json = Canister::JSONUtility.performer id
+      next unless id && name && json
 
       @manager.info("Reading performer #{index} of #{@mappings["performers"].count}\r")
 
-      performer = Performer.new
-      performer.checksum = checksum
+      performer = Performer.new(id: id)
       performer.name = name
       performer.url = json["url"]
       performer.twitter = json["twitter"]
@@ -94,15 +93,14 @@ class Canister::Tasks::Import < Canister::Tasks::Base
 
     studios = []
     @mappings["studios"].each.with_index(1) { |studioJSON, index|
-      checksum = studioJSON["checksum"]
+      id = studioJSON["id"]
       name = studioJSON["name"]
-      json = Canister::JSONUtility.studio checksum
-      next unless checksum && name && json
+      json = Canister::JSONUtility.studio id
+      next unless id && name && json
 
       @manager.info("Reading studio #{index} of #{@mappings["studios"].count}\r")
 
-      studio = Studio.new
-      studio.checksum = checksum
+      studio = Studio.new(id: id)
       studio.name = name
       studio.url = json["url"]
       studio.image = Base64.decode64(json["image"])
@@ -118,17 +116,16 @@ class Canister::Tasks::Import < Canister::Tasks::Base
   def import_galleries
     galleries = []
     @mappings["galleries"].each.with_index(1) { |galleryJSON, index|
-      checksum = galleryJSON["checksum"]
+      id = galleryJSON["id"]
       path = galleryJSON["path"]
-      next unless checksum && path
+      next unless id && path
 
       @manager.info("Reading gallery #{index} of #{@mappings["galleries"].count}\r")
 
-      gallery = Gallery.new
-      gallery.checksum = checksum
+      gallery = Gallery.new(id: id)
       gallery.path = path
 
-      json = Canister::JSONUtility.gallery checksum
+      json = Canister::JSONUtility.gallery id
       if json
         gallery.title = json["title"]
 
@@ -151,16 +148,16 @@ class Canister::Tasks::Import < Canister::Tasks::Base
     tags = []
 
     @mappings["scenes"].each.with_index(1) { |sceneJSON, index|
-      checksum = sceneJSON["checksum"]
+      id = sceneJSON["id"]
       path = sceneJSON["path"]
-      unless checksum && path
-        @manager.warn("Scene mapping without checksum and path! #{sceneJSON}")
+      unless id && path
+        @manager.warn("Scene mapping without id and path! #{sceneJSON}")
         next
       end
 
       @manager.info("Importing tags for scene #{index} of #{@mappings["scenes"].count}\r")
 
-      json = Canister::JSONUtility.scene checksum
+      json = Canister::JSONUtility.scene id
       if json
         scene_tag_names = json["tags"]
         if scene_tag_names
@@ -198,20 +195,20 @@ class Canister::Tasks::Import < Canister::Tasks::Base
 
   def import_scenes
     @mappings["scenes"].each.with_index(1) { |sceneJSON, index|
-      checksum = sceneJSON["checksum"]
+      id = sceneJSON["id"]
       path = sceneJSON["path"]
-      unless checksum && path
-        @manager.warn("Scene mapping without checksum and path! #{sceneJSON}")
+      unless id && path
+        @manager.warn("Scene mapping without id and path! #{sceneJSON}")
         next
       end
 
       @manager.info("Importing scene #{index} of #{@mappings["scenes"].count}\r")
 
-      scene = Scene.new
-      scene.checksum = checksum
+      scene = Scene.find_by(id: id)
+      scene ||= Scene.new(id: id)
       scene.path = path
 
-      json = Canister::JSONUtility.scene checksum
+      json = Canister::JSONUtility.scene id
       if json
         scene.title = json["title"]
         scene.details = json["details"]
@@ -222,13 +219,13 @@ class Canister::Tasks::Import < Canister::Tasks::Base
         studio = get_studio(json["studio"])
         scene.studio = studio if studio
 
-        gallery_checksum = json["gallery"]
-        if gallery_checksum
-          gallery = Gallery.find_by(checksum: gallery_checksum)
+        gallery_id = json["gallery_id"]
+        if gallery_id
+          gallery = Gallery.find_by(id: gallery_id)
           if gallery
             scene.gallery = gallery
           else
-            @manager.warn("Gallery does not exist! #{gallery_checksum}")
+            @manager.warn("Gallery does not exist! #{gallery_id}")
           end
         end
 
@@ -245,7 +242,8 @@ class Canister::Tasks::Import < Canister::Tasks::Base
         markers = json["markers"]
         if markers
           markers.each { |marker|
-            new_marker = SceneMarker.new
+            marker_id = marker["id"]
+            new_marker = SceneMarker.new(id: marker_id)
             new_marker.title = marker["title"]
             new_marker.seconds = marker["seconds"]
             new_marker.end_seconds = marker["end_seconds"] if marker["end_seconds"]
@@ -264,6 +262,18 @@ class Canister::Tasks::Import < Canister::Tasks::Base
 
             scene.scene_markers << new_marker
           }
+        end
+
+        # Import checksums
+        if json["checksums"]
+          scene.checksums.destroy_all
+          json["checksums"].each do |checksum_data|
+            Checksum.create!(
+              hashable: scene,
+              checksum_type: checksum_data["type"],
+              hash_value: checksum_data["value"]
+            )
+          end
         end
 
         file_info = json["file"]

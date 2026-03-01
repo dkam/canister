@@ -73,13 +73,20 @@ class ScenesController < ApplicationController
       params[:format] = "jpg"
     end
 
-    @scene = Scene.find_by(checksum: params[:id]) || Scene.find(params[:id])
+    # Try to find by UUID first
+    @scene = Scene.find_by(id: params[:id])
+    # If not found by UUID, try finding by any checksum
+    @scene ||= Checksum.joins(:hashable)
+      .find_by(hash_value: params[:id], hashable_type: "Scene")
+      &.hashable
+
+    raise ActiveRecord::RecordNotFound unless @scene
   end
 
   def build_stream_endpoints(scene)
     url_for_kind = {
-      direct:      stream_scene_path(scene),
-      hls:         stream_hls_scene_path(scene),
+      direct: stream_scene_path(scene),
+      hls: stream_hls_scene_path(scene),
       progressive: stream_mp4_scene_path(scene)
     }
 

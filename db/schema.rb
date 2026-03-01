@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_01_130012) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_01_173953) do
   create_table "active_storage_attachments", id: :uuid, force: :cascade do |t|
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
@@ -39,8 +39,19 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_130012) do
     t.index ["blob_id", "variation_digest"], name: "index_active_storage_variant_records_uniqueness", unique: true
   end
 
+  create_table "checksums", force: :cascade do |t|
+    t.string "checksum_type", default: "opensubtitles", null: false
+    t.datetime "created_at", null: false
+    t.string "hash_value", null: false
+    t.binary "hashable_id", null: false
+    t.string "hashable_type", null: false
+    t.datetime "updated_at", null: false
+    t.index ["hash_value"], name: "index_checksums_on_hash_value"
+    t.index ["hashable_type", "hashable_id", "checksum_type"], name: "index_checksums_unique", unique: true
+    t.index ["hashable_type", "hashable_id"], name: "index_checksums_on_hashable_type_and_hashable_id"
+  end
+
   create_table "galleries", id: :uuid, force: :cascade do |t|
-    t.string "checksum"
     t.datetime "created_at", null: false
     t.string "ownable_id"
     t.string "ownable_type"
@@ -114,7 +125,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_130012) do
   create_table "scenes", id: :uuid, force: :cascade do |t|
     t.string "audio_codec"
     t.integer "bitrate"
-    t.string "checksum"
     t.datetime "created_at", null: false
     t.date "date"
     t.string "details"
@@ -132,7 +142,6 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_130012) do
     t.string "url"
     t.string "video_codec"
     t.integer "width"
-    t.index ["checksum"], name: "index_scenes_on_checksum"
     t.index ["library_id"], name: "index_scenes_on_library_id"
     t.index ["path"], name: "index_scenes_on_path", unique: true
     t.index ["studio_id"], name: "index_scenes_on_studio_id"
