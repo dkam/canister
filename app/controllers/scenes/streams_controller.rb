@@ -62,18 +62,25 @@ class Scenes::StreamsController < ApplicationController
     response.stream.close
   end
 
-  # HLS manifest — starts FFmpeg segmenter, returns M3U8
+  # HLS manifest — reuses existing segments/manifest if present, otherwise starts FFmpeg
   def stream_hls
     stream_config = @scene.available_streams.find { |s| s[:kind] == :hls }
     return head :not_found unless stream_config
 
     tmp_dir = hls_tmp_dir
-    FileUtils.rm_rf(tmp_dir)
-    FileUtils.mkdir_p(tmp_dir)
+    ffmpeg_manifest = tmp_dir.join("manifest.m3u8")
 
-    start_hls_ffmpeg(stream_config, tmp_dir)
+    if ffmpeg_manifest.exist?
+      # Segments exist from a previous (or current) FFmpeg run — reuse them.
+      # If FFmpeg is still running it will keep adding segments; if done, they're all there.
+      manifest = rewrite_ffmpeg_manifest(ffmpeg_manifest)
+    else
+      # Fresh start — no rm_rf, just mkdir_p
+      FileUtils.mkdir_p(tmp_dir)
+      start_hls_ffmpeg(stream_config, tmp_dir)
+      manifest = generate_m3u8  # calculated fallback while FFmpeg runs
+    end
 
-    manifest = generate_m3u8(tmp_dir)
     render plain: manifest, content_type: "application/vnd.apple.mpegurl"
   end
 
@@ -96,6 +103,8 @@ class Scenes::StreamsController < ApplicationController
 
   HLS_SEGMENT_DURATION = 2      # seconds
   HLS_SEGMENT_WAIT_TIMEOUT = 15 # seconds
+  HLS_RUNNING = Mutex.new
+  HLS_PIDS    = Set.new         # scene IDs currently being transcoded
 
   def hls_tmp_dir
     Rails.root.join("tmp", "hls", @scene.id.to_s)
@@ -106,17 +115,48 @@ class Scenes::StreamsController < ApplicationController
   end
 
   def start_hls_ffmpeg(config, tmp_dir)
+    HLS_RUNNING.synchronize do
+      return if HLS_PIDS.include?(@scene.id)
+      HLS_PIDS.add(@scene.id)
+    end
+
     cmd = build_hls_ffmpeg_command(config, tmp_dir)
-    Rails.logger.info "HLS FFmpeg command: #{cmd.join(" ")}"
+    Rails.logger.info "HLS FFmpeg: #{cmd.join(" ")}"
 
     Thread.new do
+      done = false
+
+      # Watcher: renames .N.ts → N.ts once segment N is complete.
+      # Segment N is complete when .(N+1).ts has appeared (FFmpeg has moved on).
+      watcher = Thread.new do
+        renamed = Set.new
+        until done
+          Dir[tmp_dir.join(".*.ts")].sort.each_cons(2) do |a, _b|
+            n = File.basename(a)[/\.(\d+)\.ts/, 1]&.to_i
+            next unless n && !renamed.include?(n)
+            File.rename(a, tmp_dir.join("#{n}.ts"))
+            renamed.add(n)
+          end
+          sleep 0.2
+        end
+        # After FFmpeg exits, rename any remaining dotfiles
+        Dir[tmp_dir.join(".*.ts")].each do |f|
+          n = File.basename(f)[/\.(\d+)\.ts/, 1]
+          File.rename(f, tmp_dir.join("#{n}.ts")) if n
+        end
+      end
+
       Open3.popen3(*cmd) do |_stdin, _stdout, stderr, wait_thr|
         err = stderr.read
         Rails.logger.info "HLS FFmpeg stderr: #{err}" if err.present?
         wait_thr.value
       end
     rescue => e
-      Rails.logger.error "HLS FFmpeg error for scene #{@scene.id}: #{e.message}"
+      Rails.logger.error "HLS FFmpeg error scene #{@scene.id}: #{e.message}"
+    ensure
+      done = true
+      watcher&.join
+      HLS_RUNNING.synchronize { HLS_PIDS.delete(@scene.id) }
     end
   end
 
@@ -146,14 +186,28 @@ class Scenes::StreamsController < ApplicationController
       "-hls_flags", "split_by_time",
       "-hls_segment_type", "mpegts",
       "-hls_playlist_type", "vod",
-      "-hls_segment_filename", tmp_dir.join("%d.ts").to_s,
+      "-hls_segment_filename", tmp_dir.join(".%d.ts").to_s,
       tmp_dir.join("manifest.m3u8").to_s
     ]
 
     cmd
   end
 
-  def generate_m3u8(tmp_dir)
+  # Parse FFmpeg's manifest and substitute segment filenames with our URL helpers.
+  # Handles both bare filenames ("42.ts") and dotfile names (".42.ts").
+  def rewrite_ffmpeg_manifest(ffmpeg_manifest)
+    lines = File.readlines(ffmpeg_manifest, chomp: true).map do |line|
+      if (m = line.match(/\A\.?(\d+)\.ts\z/))
+        stream_hls_segment_scene_url(@scene, segment: m[1].to_i)
+      else
+        line
+      end
+    end
+    lines.join("\n")
+  end
+
+  # Calculated fallback manifest — used on fresh start before FFmpeg's manifest exists
+  def generate_m3u8
     duration = @scene.duration.to_f
     segment_count = (duration / HLS_SEGMENT_DURATION).ceil
     last_duration = duration - ((segment_count - 1) * HLS_SEGMENT_DURATION)
