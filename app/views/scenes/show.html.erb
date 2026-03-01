@@ -9,16 +9,16 @@
 <div id="scene-player"
      data-turbo-permanent
      data-controller="player"
-     data-player-src-value="<%= stream_scene_path(@scene) %>"
+     data-player-streams-value="<%= @stream_endpoints.to_json %>"
      data-player-poster-value="<%= screenshot_scene_path(@scene) %>"
      data-player-vtt-value="<%= chapter_vtt_scene_path(@scene) %>"
      data-player-scene-id-value="<%= @scene.id %>"
      data-player-title-value="<%= j(@scene.title.presence || File.basename(@scene.path, '.*')) %>"
      class="bg-black">
   <video id="scene-video"
-         class="video-js vjs-default-skin w-full max-h-[75vh]"
-         controls
-         preload="metadata">
+          class="video-js vjs-default-skin vjs-big-play-centered w-full max-h-[75vh]"
+          controls
+          preload="metadata">
   </video>
 </div>
 

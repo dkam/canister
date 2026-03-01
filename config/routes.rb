@@ -1,6 +1,6 @@
 Rails.application.routes.draw do
   # Health check endpoint
-  get "up" => "rails/health#show", as: :rails_health_check
+  get "up" => "rails/health#show", :as => :rails_health_check
 
   # VTT sprite/thumbs — must come before resources :scenes
   get "scenes/:id", to: "scenes#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/
@@ -9,7 +9,8 @@ Rails.application.routes.draw do
 
   resources :scenes, only: [:index, :show] do
     member do
-      get :stream
+      get :stream,      to: "scenes/streams#stream"
+      get :stream_live, to: "scenes/streams#stream_live"
       get :screenshot
       get "screenshot/:seconds", to: "scenes#screenshot", as: :screenshot_at
       get :preview

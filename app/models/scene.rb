@@ -1,5 +1,6 @@
 class Scene < ApplicationRecord
   include Filterable
+  include Streamable
   include Taggable
 
   validates_presence_of :checksum, :path
@@ -70,17 +71,23 @@ class Scene < ApplicationRecord
   scope :missing_gallery, -> { joins("LEFT OUTER JOIN galleries ON galleries.ownable_id = scenes.id").where("galleries.ownable_id IS NULL") }
   scope :missing_performers, -> { left_outer_joins(:performers).where(performers: {id: nil}) }
   scope :needing_processing, -> {
-    bad_codec = where.not(video_codec: Canister::VALID_HTML5_CODECS)
-    bad_container = where(
-      "path NOT LIKE '%.mp4' AND path NOT LIKE '%.m4v' AND path NOT LIKE '%.mov' AND path NOT LIKE '%.webm'"
-    )
-    bad_codec.or(bad_container)
+    where.not(video_codec: Canister::VALID_HTML5_CODECS)
   }
+
+  def needs_remux?
+    !File.exist?(transcode_path) &&
+      Canister::VALID_HTML5_CODECS.include?(video_codec) &&
+      !Canister::STREAMABLE_EXTENSIONS.include?(File.extname(path).downcase)
+  end
+
+  def needs_transcode?
+    !File.exist?(transcode_path) &&
+      !Canister::VALID_HTML5_CODECS.include?(video_codec)
+  end
 
   def is_streamable
     return true if File.exist?(transcode_path)
-    Canister::VALID_HTML5_CODECS.include?(video_codec) &&
-      Canister::STREAMABLE_EXTENSIONS.include?(File.extname(path).downcase)
+    Canister::VALID_HTML5_CODECS.include?(video_codec)
   end
 
   def stream_file_path
@@ -89,6 +96,10 @@ class Scene < ApplicationRecord
 
   def media_exists?
     File.exist?(path)
+  end
+
+  def transcode_path
+    File.join(Canister::TRANSCODE_DIRECTORY, "#{checksum}.mp4")
   end
 
   def screenshot(seconds: nil, width: nil)
@@ -123,8 +134,8 @@ class Scene < ApplicationRecord
 
   private
 
-  def transcode_path
-    File.join(Canister::TRANSCODE_DIRECTORY, "#{checksum}.mp4")
+  def get_vtt_time(seconds)
+    Time.at(seconds).gmtime.strftime("%H:%M:%S")
   end
 
   def get_vtt_time(seconds)

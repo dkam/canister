@@ -11,10 +11,10 @@
     </aside>
 
     <%# Main content %>
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0" data-controller="view-mode" data-view-mode-key-value="scenes">
 
       <%# Toolbar: result count + view mode toggle %>
-      <div class="flex items-center justify-between mb-4" data-controller="view-mode" data-view-mode-key-value="scenes">
+      <div class="flex items-center justify-between mb-4">
         <p class="text-sm text-gray-500 dark:text-gray-400">
           <%= raw @pagy.info_tag %>
         </p>

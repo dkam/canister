@@ -1,5 +1,5 @@
 class ScenesController < ApplicationController
-  before_action :set_scene, only: [:show, :stream, :screenshot, :preview, :webp, :vtt, :chapter_vtt]
+  before_action :set_scene, only: [:show, :screenshot, :preview, :webp, :vtt, :chapter_vtt]
 
   # GET /scenes
   def index
@@ -25,10 +25,7 @@ class ScenesController < ApplicationController
   # GET /scenes/:id
   def show
     @markers = @scene.scene_markers.includes(:primary_tag)
-  end
-
-  def stream
-    send_file @scene.stream_file_path, disposition: "inline"
+    @stream_endpoints = build_stream_endpoints(@scene)
   end
 
   def screenshot
@@ -77,6 +74,17 @@ class ScenesController < ApplicationController
     end
 
     @scene = Scene.find_by(checksum: params[:id]) || Scene.find(params[:id])
+  end
+
+  def build_stream_endpoints(scene)
+    url_for_kind = {
+      direct: stream_scene_path(scene),
+      live:   stream_live_scene_path(scene)
+    }
+
+    scene.available_streams.map do |s|
+      s.except(:kind).merge(url: url_for_kind.fetch(s[:kind]), seek_mode: s[:seek_mode].to_s)
+    end
   end
 
   def scene_filter_params
