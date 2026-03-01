@@ -78,12 +78,18 @@ class ScenesController < ApplicationController
 
   def build_stream_endpoints(scene)
     url_for_kind = {
-      direct: stream_scene_path(scene),
-      live:   stream_live_scene_path(scene)
+      direct:      stream_scene_path(scene),
+      hls:         stream_hls_scene_path(scene),
+      progressive: stream_mp4_scene_path(scene)
     }
 
     scene.available_streams.map do |s|
-      s.except(:kind).merge(url: url_for_kind.fetch(s[:kind]), seek_mode: s[:seek_mode].to_s)
+      s.except(:kind).merge(
+        url: url_for_kind.fetch(s[:kind]),
+        seek_mode: s[:seek_mode].to_s,
+        video_copy: s[:video_copy],
+        audio_transcode: s[:audio_transcode]
+      )
     end
   end
 

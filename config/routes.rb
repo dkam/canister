@@ -9,8 +9,10 @@ Rails.application.routes.draw do
 
   resources :scenes, only: [:index, :show] do
     member do
-      get :stream,      to: "scenes/streams#stream"
-      get :stream_live, to: "scenes/streams#stream_live"
+      get :stream, to: "scenes/streams#stream"
+      get :stream_mp4, to: "scenes/streams#stream_mp4"
+      get :stream_hls, to: "scenes/streams#stream_hls"
+      get "stream_hls/:segment", to: "scenes/streams#stream_hls_segment", as: :stream_hls_segment
       get :screenshot
       get "screenshot/:seconds", to: "scenes#screenshot", as: :screenshot_at
       get :preview
