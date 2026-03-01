@@ -2,70 +2,120 @@
 
 ## Streaming Formats
 
-The app supports 6 video streaming formats via FFmpeg on-the-fly transcoding with hardware acceleration support.
+The app currently supports 2 video streaming formats via FFmpeg on-the-fly transcoding with hardware acceleration support.
 
 ### Progressive Streaming (Single File)
 
-| Endpoint | Description | Codec |
-|----------|-------------|-------|
-| `/stream` | Direct streaming (no transcoding) | Original |
-| `/stream.mp4` | MP4 container | H.264 |
-| `/stream.webm` | WebM container | VP9 |
-| `/stream.mkv` | MKV container (copy only — offered when source is already MKV) | Original + Opus audio |
+| Endpoint | Description | Codec | Scope |
+|----------|-------------|-------|--------|
+| `/stream` | Direct streaming (byte-range) | Original | Implemented |
+| `/stream.mp4` | MP4 container (smart codec selection) | H.264 (copy) or transcoded | Implemented |
+| `/stream.webm` | WebM container | VP9 | Planned |
+| `/stream.mkv` | MKV container | Original + Opus audio | Planned |
 
 ### Adaptive Bitrate Streaming
 
-| Endpoint | Description | Segments |
-|----------|-------------|----------|
-| `/stream.m3u8` | **HLS** (HTTP Live Streaming) | MPEG-TS (2-second chunks) |
-| `/stream.mpd` | **MPEG-DASH** (Dynamic Adaptive Streaming) | WebM video/audio segments (2-second chunks) |
+| Endpoint | Description | Segments | Scope |
+|----------|-------------|----------|--------|
+| `/stream.m3u8` | **HLS** (HTTP Live Streaming) | MPEG-TS (2-second chunks) | Implemented |
+| `/stream.mpd` | **MPEG-DASH** (Dynamic Adaptive Streaming) | WebM video/audio segments (2-second chunks) | Planned |
 
 ### Features
 
 - On-the-fly FFmpeg transcoding
 - Hardware acceleration support (GPU encoders)
-- Segmented streaming with 2-second chunks (HLS/DASH)
-- Seek support with segment-level precision
-- Resolution and bitrate control via `resolution` query parameter
+- Smart codec selection (copy when possible, transcode when needed)
+- Seek support with timestamp parameter (`?start=`) for progressive streams
+- Resolution and bitrate control via `resolution` query parameter (planned)
 
 ---
 
 ## How a Format Is Chosen
 
-### Backend: Building the stream list
+### Backend: Building Stream List
 
-The backend generates an ordered list of available stream endpoints for each video based on the file's codec metadata. It does not pick one format — it offers everything that's valid and lets the frontend decide.
+The backend generates an ordered list of available stream endpoints for each video based on file's codec metadata. It does not pick one format — it offers everything that's valid and lets the frontend decide.
 
 **Audio codec compatibility** gates which endpoints are offered:
 
 | Container | Allowed audio codecs |
 |-----------|----------------------|
-| MP4 | AAC, MP3, Opus |
-| WebM | Vorbis, Opus |
-| MKV | AAC, MP3, Vorbis, Opus |
+| MP4 | AAC, MP3 |
+| WebM | Opus, Vorbis |
+| MKV | Never offered as direct (browsers don't support MKV) |
 
-The direct stream (`/stream`) is only included if the audio codec is compatible with the source container, or if a pre-transcoded copy already exists.
+The direct stream (`/stream`) is only included if:
+1. Video codec is valid HTML5 (H.264, H.265, VP8, VP9, AV1)
+2. Audio codec matches container (AAC/MP3 for MP4, Opus/Vorbis for WebM)
+3. Container is browser-native (MP4, WebM, MOV, M4V)
 
-MKV is only offered if the source file is already an MKV — there's no point transcoding to MKV otherwise since it just does a container copy.
+MP4 progressive stream (`/stream.mp4`) includes smart codec flags:
+- `video_copy: true` if source is H.264
+- `audio_transcode: true` if source audio is Opus/Vorbis (must transcode to AAC)
 
-Resolution variants are filtered by a `max_streaming_transcode_size` config (Original, 4K, 1080p, 720p, 480p, 240p). Each applicable format gets one entry per resolution tier smaller than the source.
+**Example stream configs:**
 
-The resulting list — each entry with a URL, MIME type, and label — is returned to the client (via GraphQL as `sceneStreams`).
+For MKV with H.264 + Opus:
+```json
+[
+  {
+    "kind": "progressive",
+    "mime_type": "video/mp4",
+    "label": "MP4 (H.264 copy) AAC transcode",
+    "seek_mode": "timestamp",
+    "video_copy": true,
+    "audio_transcode": true
+  }
+]
+```
 
-### Frontend: Trying sources in order
+For MP4 with H.264 + AAC:
+```json
+[
+  {
+    "kind": "direct",
+    "mime_type": "video/mp4",
+    "label": "Direct stream",
+    "seek_mode": "byte_range",
+    "video_copy": true,
+    "audio_transcode": false
+  },
+  {
+    "kind": "progressive",
+    "mime_type": "video/mp4",
+    "label": "MP4 (H.264 copy)",
+    "seek_mode": "timestamp",
+    "video_copy": true,
+    "audio_transcode": false
+  }
+]
+```
+
+The resulting list — each entry with a URL, MIME type, label, and codec flags — is returned to the client via the `build_stream_endpoints` method in `ScenesController`.
+
+### FFmpeg Command Selection
+
+The `stream_mp4` controller uses the stream config to build smart FFmpeg commands:
+
+| Video | Audio | FFmpeg Command |
+|--------|--------|---------------|
+| H.264 | AAC/MP3 | `-c:v copy -c:a copy` (fastest) |
+| H.264 | Opus/Vorbis | `-c:v copy -ac 2` (fast: video copy, audio remux to AAC) |
+| VP9/AV1 | Any | `-c:v libx264 -preset veryfast -crf 23 -ac 2` (slow: full transcode) |
+
+### Frontend: Trying Sources in Order
 
 The player receives the full list and works through it:
 
-1. **Safari filter** — MP4/WebM/MKV transcodes are removed for Safari. Safari only gets the direct stream and HLS/DASH.
-2. **Play the first source** — usually the direct stream.
-3. **Auto-fallback** — if playback fails with `MEDIA_ERR_SRC_NOT_SUPPORTED` or `MEDIA_ERR_DECODE`, the player silently moves to the next source. If the user manually selected a format, fallback is disabled.
-4. **User override** — a source selector dropdown lets the user force a specific format.
+1. **Play first source** — usually direct stream
+2. **Auto-fallback** — if playback fails with `MEDIA_ERR_SRC_NOT_SUPPORTED` or `MEDIA_ERR_DECODE`, player moves to the next source
+3. **User override** — a source selector dropdown lets user force a specific format (Video.js feature)
 
 ### Seeking
 
-Progressive transcodes (`/stream.mp4`, `/stream.webm`, `/stream.mkv`) require a `?start=<seconds>` parameter to seek — the FFmpeg process restarts at that offset.
+Direct streaming (`/stream`) uses byte-range requests for seeking.
 
-HLS and DASH handle seeking internally via segment index. The player treats these as "direct" for seek purposes even though transcoding may be happening underneath.
+Progressive streaming (`/stream.mp4`) requires a `?start=<seconds>` parameter for seeking — the FFmpeg process restarts at that offset.
 
 ---
 
@@ -74,15 +124,13 @@ HLS and DASH handle seeking internally via segment index. The player treats thes
 ```
 Video codecs in DB
     ↓
-Backend validates audio codec against each container format
+Backend validates audio codec against container format
     ↓
-Generates ordered list: [direct, mp4, webm, mkv, m3u8, mpd] × resolutions
+Generates ordered list: [direct, progressive] × resolutions
     ↓
-GraphQL: sceneStreams
+Frontend receives stream configs via JSON
     ↓
-Frontend filters for Safari (removes mp4/webm/mkv transcodes)
-    ↓
-Video.js tries first source (direct stream)
+Video.js tries first source (direct stream if available)
     ↓
 Codec error? → auto-try next source in list
     ↓
@@ -93,7 +141,7 @@ User can manually override at any time
 
 ## Progressive Transcode Lifecycle
 
-Progressive transcode (`/stream.mp4`, `/stream.webm`, `/stream.mkv`) shares identical behavior across formats. Only the FFmpeg output format differs.
+Progressive transcode (`/stream.mp4`) uses per-request FFmpeg processes with automatic cleanup.
 
 ### Request Flow
 
@@ -104,26 +152,25 @@ FFmpeg starts → -ss 0 -i input.mkv -c:v copy -ac 2 -f mp4 pipe:1
               → transcoding from 0 to end
 ```
 
-**Stash implementation:**
-- `tmp/stash/internal/api/routes_scene.go:102-133` — `StreamMp4`, `StreamWebM`, `StreamMKV` endpoints
-- `tmp/stash/internal/api/routes_scene.go:145-166` — `streamTranscode` parses `?start=` parameter and creates `TranscodeOptions`
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:223-246` — `ServeTranscode` spawns FFmpeg and pipes to response
+**Rails implementation:**
+- `app/controllers/scenes/streams_controller.rb:25-58` — `stream_mp4` action builds command from stream config
+- `app/controllers/scenes/streams_controller.rb:68-85` — `build_ffmpeg_command` constructs FFmpeg args based on codec flags
+- `app/models/concerns/streamable.rb:10-23` — `available_streams` provides stream configuration
 
 **2. Seek to unbuffered position:**
 ```
-Browser closes connection → io.Copy returns EPIPE/ECONNRESET
-FFmpeg killed via context cancellation
+Browser closes connection → Open3.popen3 returns EPIPE/ECONNRESET
+FFmpeg killed automatically (process dies when pipe closes)
 Browser → GET /scenes/5/stream.mp4?start=45.5 (NEW FFmpeg process)
 ```
 
-**Stash implementation:**
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:299-302` — `io.Copy(w, stdout)` detects broken pipe (`EPIPE`/`ECONNRESET`)
-- `tmp/stash/pkg/ffmpeg/stream.go:83-133` — `StreamRequestContext` wraps `r.Context()` for automatic cancellation
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:267` — `ctx.AttachCommand(cmd)` ties FFmpeg lifecycle to request context
+**Rails implementation:**
+- `app/controllers/scenes/streams_controller.rb:33` — `stream_mp4` logs debug info for each request
+- `app/controllers/scenes/streams_controller.rb:48-52` — Open3.popen3 with stderr consumer thread prevents deadlock
 
 **3. Browser pauses:**
 ```
-FFmpeg: io.Copy(w, stdout)
+FFmpeg: Open3.popen3(...stdout...)
        ↓
     stdout pipe buffers FFmpeg output
        ↓
@@ -137,9 +184,9 @@ FFmpeg: io.Copy(w, stdout)
 
 FFmpeg **waits** (paused), consuming memory but no wasted network traffic. Backpressure is natural — FFmpeg can't write until browser reads again.
 
-**Stash implementation:**
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:248-289` — `getTranscodeStream` spawns FFmpeg with stdout pipe
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:299` — `io.Copy(w, stdout)` handles backpressure via goroutine blocking
+**Rails implementation:**
+- `app/controllers/scenes/streams_controller.rb:49-52` — Thread consumes stderr to prevent pipe deadlock
+- `app/controllers/scenes/streams_controller.rb:55-56` — `until stdout.eof?` loop blocks on backpressure
 
 **4. Browser resumes:**
 ```
@@ -160,8 +207,8 @@ Data sent: 259 - 45.5 = 213.5 seconds of video
 - No `Content-Length` header (chunked transfer)
 - Response ends when: video finishes OR browser closes connection
 
-**Stash implementation:**
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:293-295` — Sets `Cache-Control: no-store` and MIME type, no `Content-Length`
+**Rails implementation:**
+- `app/controllers/scenes/streams_controller.rb:43-44` — Sets `Cache-Control: no-store` and MIME type, no `Content-Length`
 
 ### FFmpeg Process Lifecycle
 
@@ -170,102 +217,68 @@ Data sent: 259 - 45.5 = 213.5 seconds of video
 | Browser seeks to new position | Old FFmpeg killed, new one spawned |
 | Browser pauses | FFmpeg blocks on full pipe (backpressure) |
 | Browser resumes | FFmpeg unblocks, continues transcoding |
-| Browser stops/closes tab | FFmpeg killed via context cancellation |
-| Error during transcode | Process exits, error logged |
+| Browser stops/closes tab | FFmpeg killed (SIGPIPE from closed pipe) |
+| Error during transcode | Process exits, error logged in ensure block |
 
-This is why HLS is preferred for frequent seeking — segments are cached and reusable, avoiding FFmpeg restart overhead.
-
-**Stash implementation:**
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:270-289` — Goroutine monitors FFmpeg exit, logs errors (ignores `ExitError` since process is killed)
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:284-288` — Only logs non-exit errors (process is always forcibly killed)
-- `tmp/stash/pkg/ffmpeg/stream.go:88-93` — `NewStreamRequestContext` wraps HTTP request context for cancellation
+**Rails implementation:**
+- `app/controllers/scenes/streams_controller.rb:35-37` — Rescue `ClientDisconnected`, `EPIPE` gracefully
+- `app/controllers/scenes/streams_controller.rb:39-40` — Rescue and log other errors
+- `app/controllers/scenes/streams_controller.rb:43-59` — Ensure block closes response.stream
 
 ### Format Differences
 
-All three progressive formats use identical request/response lifecycle:
+Progressive MP4 streaming uses smart codec selection:
 
-| Format | Video Codec | Audio Codec | Seek Support |
-|---------|-------------|-------------|--------------|
-| `.stream.mp4` | Copy or transcode to H.264 | Copy or transcode to AAC | `?start=` |
-| `.stream.webm` | Copy or transcode to VP9 | Copy or transcode to Opus | `?start=` |
-| `.stream.mkv` | Copy only | Copy only | `?start=` |
+| Source Video | Source Audio | MP4 Stream | Operation |
+|---------------|---------------|----------------|------------|
+| H.264 | AAC/MP3 | H.264 + AAC | Copy (fastest) |
+| H.264 | Opus/Vorbis | H.264 + AAC | Video copy + audio transcode (fast) |
+| VP9/AV1 | Any | H.264 + AAC | Full transcode (slow) |
 
-MKV is special — it never re-encodes, just remuxes (`.stream.mkv` = direct container stream).
+**Rails implementation:**
+- `app/models/concerns/streamable.rb:46-67` — `build_mp4_stream` determines copy vs transcode flags
+- `app/controllers/scenes/streams_controller.rb:68-85` — `build_ffmpeg_command` constructs FFmpeg args accordingly
 
-**Stash implementation:**
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:95-142` — `StreamTypeMP4`, `StreamTypeWEBM`, `StreamTypeMKV` define codec/format args
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:152-185` — `FileGetCodec` decides copy vs transcode based on codec compatibility
-- `tmp/stash/pkg/ffmpeg/stream_transcode.go:187-221` — `makeStreamArgs` builds FFmpeg command with `-ss` for seeking
+---
 
-**1. Initial load:**
-```
-Browser → GET /scenes/5/stream.mp4?start=0
-FFmpeg starts → -ss 0 -i input.mkv -c:v copy -ac 2 -f mp4 pipe:1
-              → transcoding from 0 to end
-```
+## Configuration
 
-**2. Seek to unbuffered position:**
-```
-Browser closes connection → io.Copy returns EPIPE/ECONNRESET
-FFmpeg killed via context cancellation
-Browser → GET /scenes/5/stream.mp4?start=45.5 (NEW FFmpeg process)
-```
+| Variable | Default | Description |
+|---|---|---|
+| `TRANSCODE_PATH` | `{root}/transcodes` | Pre-generated transcode files |
+| `FFMPEG_LOGGER_LEVEL` | `WARN` | FFmpeg output logging level |
 
-**3. Browser pauses:**
-```
-FFmpeg: io.Copy(w, stdout)
-       ↓
-    stdout pipe buffers FFmpeg output
-       ↓
-    TCP connection buffers network data
-       ↓
-    Browser stops reading
-       ↓
-    TCP buffer fills → network write blocks
-    Pipe buffer fills → FFmpeg blocks on write
-```
+---
 
-FFmpeg **waits** (paused), consuming memory but no wasted network traffic. Backpressure is natural — FFmpeg can't write until browser reads again.
+## Implementation Files
 
-**4. Browser resumes:**
-```
-Browser reads → TCP buffer drains → pipe buffer drains → FFmpeg unblocks
-Transcoding continues
-```
+| File | Purpose |
+|------|---------|
+| `app/models/concerns/streamable.rb` | Stream configuration generation with codec flags |
+| `app/controllers/scenes/streams_controller.rb` | Direct streaming + progressive MP4 streaming |
+| `app/controllers/scenes_controller.rb` | Stream endpoint URL building |
+| `config/routes.rb` | `/stream` and `/stream_mp4` route definitions |
 
-### Data Volume
+---
 
-Each request sends **data from start time to end of video** (or until disconnect):
+## Testing Scenarios
 
-```
-Request: /stream.mp4?start=45.5
-Video duration: 4:19 (259 seconds)
-Data sent: 259 - 45.5 = 213.5 seconds of video
-```
+| Source File | Video | Audio | Expected MP4 Stream |
+|--------------|--------|--------|---------------------|
+| MP4, H.264 + AAC | H.264 | AAC | Direct + MP4 copy (fastest) |
+| MP4, H.264 + MP3 | H.264 | MP3 | Direct + MP4 copy (fastest) |
+| WebM, VP9 + Opus | VP9 | Opus | MP4 full transcode (slow) |
+| MKV, H.264 + Opus | H.264 | Opus | MP4: video copy, audio transcode (fast) |
+| MKV, AV1 + Vorbis | AV1 | Vorbis | MP4 full transcode (slow) |
 
-- No `Content-Length` header (chunked transfer)
-- Response ends when: video finishes OR browser closes connection
+---
 
-### FFmpeg Process Lifecycle
+## Future Enhancements
 
-| Scenario | FFmpeg Behavior |
-|----------|----------------|
-| Browser seeks to new position | Old FFmpeg killed, new one spawned |
-| Browser pauses | FFmpeg blocks on full pipe (backpressure) |
-| Browser resumes | FFmpeg unblocks, continues transcoding |
-| Browser stops/closes tab | FFmpeg killed via context cancellation |
-| Error during transcode | Process exits, error logged |
-
-This is why HLS is preferred for frequent seeking — segments are cached and reusable, avoiding FFmpeg restart overhead.
-
-### Format Differences
-
-All three progressive formats use identical request/response lifecycle:
-
-| Format | Video Codec | Audio Codec | Seek Support |
-|---------|-------------|-------------|--------------|
-| `.stream.mp4` | Copy or transcode to H.264 | Copy or transcode to AAC | `?start=` |
-| `.stream.webm` | Copy or transcode to VP9 | Copy or transcode to Opus | `?start=` |
-| `.stream.mkv` | Copy only | Copy only | `?start=` |
-
-MKV is special — it never re-encodes, just remuxes (`.stream.mkv` = direct container stream).
+- WebM progressive streaming (`/stream.webm`) — for VP9 sources
+- MKV progressive streaming (`/stream.mkv`) — for MKV sources
+- HLS (`/stream.m3u8`) — adaptive streaming with segment caching
+- MPEG-DASH (`/stream.mpd`) — adaptive streaming with segment caching
+- Resolution variants (4K, 1080p, 720p, 480p, 240p)
+- Stream process manager — prevent duplicate FFmpeg instances
+- Hardware acceleration — GPU encoder support
