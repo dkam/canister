@@ -83,20 +83,9 @@ HLS streaming **basic working** — HLS playback is functional.
 
 ### Library Sources
 
-Currently a single `stash_directory` env var hardcoded at boot — no `Library` model exists.
+`Library` model exists with `name`, `path`, `kind`, `read_only`, `default_video_kind`. `Scene` has `belongs_to :library`. No controller/UI or seed logic yet.
 
-Needs a database-driven `Library` model:
-
-```
-Library
-  - name
-  - path          # local path or URL depending on kind
-  - kind          # local, http, webdav, s3, jellyfin, plex, dlna
-  - read_only: boolean
-  - default_video_kind  # :video or :music_video — applied to videos on scan, can be overridden per video
-```
-
-A default local library is created at first run pointing to `/videos/`. In Docker, additional libraries are mounted as volumes under `/videos/` (e.g. `/videos/movies`, `/videos/tv`). The app only ever sees container-side paths.
+A default local library should be created at first run pointing to `/videos/`. In Docker, additional libraries are mounted as volumes under `/videos/` (e.g. `/videos/movies`, `/videos/tv`). The app only ever sees container-side paths.
 
 Supported sources (read-only or read-write):
 

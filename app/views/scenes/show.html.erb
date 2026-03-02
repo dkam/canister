@@ -1,25 +1,31 @@
 <% content_for :title, @scene.title.presence || "Scene" %>
 
-<%# Video.js CSS — loaded only on show page %>
-<% content_for :head do %>
-  <link href="https://cdn.jsdelivr.net/npm/video.js@8.21.0/dist/video-js.min.css" rel="stylesheet">
-<% end %>
-
 <%# Full-width player — data-turbo-permanent persists it during scene-to-scene navigation %>
 <div id="scene-player"
-     data-turbo-permanent
      data-controller="player"
      data-player-streams-value="<%= @stream_endpoints.to_json %>"
      data-player-poster-value="<%= screenshot_scene_path(@scene) %>"
      data-player-vtt-value="<%= chapter_vtt_scene_path(@scene) %>"
      data-player-scene-id-value="<%= @scene.id %>"
      data-player-title-value="<%= j(@scene.title.presence || File.basename(@scene.path, '.*')) %>"
-     class="bg-black">
+     class="bg-black relative">
   <video id="scene-video"
           class="video-js vjs-default-skin vjs-big-play-centered w-full max-h-[75vh]"
           controls
           preload="metadata">
   </video>
+  <div class="player-overlay" data-player-target="overlay">
+    <button class="player-overlay-btn" data-action="click->player#skipBack" aria-label="Skip back 10 seconds">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12.5 3C7.81 3 4 6.81 4 11.5H1l4 4 4-4H6c0-3.59 2.91-6.5 6.5-6.5S19 7.91 19 11.5 16.09 18 12.5 18c-1.8 0-3.42-.73-4.6-1.9l-1.42 1.42A8.48 8.48 0 0 0 12.5 20c4.69 0 8.5-3.81 8.5-8.5S17.19 3 12.5 3z"/><text x="12.5" y="14.5" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">10</text></svg>
+    </button>
+    <button class="player-overlay-btn player-overlay-btn--play" data-action="click->player#togglePlay" data-player-target="playBtn" aria-label="Play/Pause">
+      <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="pause-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="player-overlay-btn" data-action="click->player#skipForward" aria-label="Skip forward 10 seconds">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M11.5 3C6.81 3 3 6.81 3 11.5S6.81 20 11.5 20a8.48 8.48 0 0 0 5.92-2.48l-1.42-1.42A6.46 6.46 0 0 1 11.5 18C7.91 18 5 15.09 5 11.5S7.91 5 11.5 5 18 7.91 18 11.5h-3l4 4 4-4h-3C20 6.81 16.19 3 11.5 3z"/><text x="11.5" y="14.5" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">10</text></svg>
+    </button>
+  </div>
 </div>
 
 <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">

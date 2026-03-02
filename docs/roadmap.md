@@ -12,6 +12,9 @@
 ### Fix `rubyzip` API
 - Uses pre-v3 API — update when bumping to `~> 2.3+`
 
+### Performance
+- Page load speed — profile and optimize (N+1 queries, eager loading, asset delivery)
+
 ### UX Enhancements
 - Mobile nav (hamburger / bottom tab bar)
 - Dark mode toggle
@@ -24,6 +27,8 @@
 
 ### Scene Queue / Playlist
 - Queue with autoplay, shuffle mode
+- Queue edge behaviour preference: stop (current), wrap around, or repeat
+- Persist preference in localStorage or user settings
 
 ---
 

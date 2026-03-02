@@ -9,3 +9,71 @@
     color-scheme: light dark;
   }
 }
+
+/* Hide default video.js big play button — replaced by custom overlay */
+.vjs-big-play-button {
+  display: none !important;
+}
+
+/* Player overlay buttons */
+.player-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.player-overlay--visible {
+  opacity: 1;
+}
+
+.player-overlay-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.15s;
+  pointer-events: auto;
+}
+
+.player-overlay-btn:hover {
+  background: rgba(0, 0, 0, 0.75);
+  transform: scale(1.1);
+}
+
+.player-overlay-btn--play {
+  width: 72px;
+  height: 72px;
+}
+
+/* Nav buttons in Video.js control bar */
+.vjs-nav-prev .vjs-icon-placeholder,
+.vjs-nav-next .vjs-icon-placeholder {
+  font-size: 1em;
+  line-height: 1.8em;
+}
+
+.vjs-nav-prev,
+.vjs-nav-next {
+  cursor: pointer;
+  width: 3em;
+}
+
+.vjs-nav-prev.vjs-disabled,
+.vjs-nav-next.vjs-disabled {
+  opacity: 0.3;
+  cursor: default;
+  pointer-events: none;
+}

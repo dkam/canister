@@ -76,42 +76,34 @@ class Scenes::StreamsController < ApplicationController
     manifest = if @scene.hls_segment_durations.present? && stream_config[:video_copy]
       durations = @scene.hls_segment_durations
       unless tmp_dir.join("0.ts").exist?
-        FileUtils.mkdir_p(tmp_dir)
-        start_hls_ffmpeg(stream_config, tmp_dir)
+        Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
       end
       build_manifest_from_durations(durations)
     elsif ffmpeg_manifest.exist?
       rewrite_ffmpeg_manifest(ffmpeg_manifest)
     else
-      FileUtils.mkdir_p(tmp_dir)
-      start_hls_ffmpeg(stream_config, tmp_dir)
+      Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
       generate_m3u8
     end
 
     render plain: manifest, content_type: "application/vnd.apple.mpegurl"
   end
 
-  # HLS segment — waits for .ts file, then serves it
+  # HLS segment — delegates to StreamManager for FFmpeg lifecycle
   def stream_hls_segment
     segment = params[:segment].to_i
-    segment_path = hls_tmp_dir.join("#{segment}.ts")
+    config = @scene.available_streams.find { |s| s[:kind] == :hls }
+    return head :not_found unless config
 
-    deadline = Time.now + HLS_SEGMENT_WAIT_TIMEOUT
-    loop do
-      break if File.exist?(segment_path)
-      return head :not_found if Time.now > deadline
-      sleep 0.1
+    result = Canister::StreamManager.instance.request_segment(@scene, segment, config)
+    if result == :ok
+      send_file hls_tmp_dir.join("#{segment}.ts"), disposition: "inline", type: "video/MP2T"
+    else
+      head :not_found
     end
-
-    send_file segment_path, disposition: "inline", type: "video/MP2T"
   end
 
   private
-
-  HLS_SEGMENT_DURATION = 2      # seconds
-  HLS_SEGMENT_WAIT_TIMEOUT = 15 # seconds
-  HLS_RUNNING = Mutex.new
-  HLS_PIDS    = Set.new         # scene IDs currently being transcoded
 
   def hls_tmp_dir
     Rails.root.join("tmp", "hls", @scene.id.to_s)
@@ -119,86 +111,6 @@ class Scenes::StreamsController < ApplicationController
 
   def set_scene
     @scene = Scene.find(params[:id])
-  end
-
-  def start_hls_ffmpeg(config, tmp_dir)
-    HLS_RUNNING.synchronize do
-      return if HLS_PIDS.include?(@scene.id)
-      HLS_PIDS.add(@scene.id)
-    end
-
-    cmd = build_hls_ffmpeg_command(config, tmp_dir)
-    Rails.logger.info "HLS FFmpeg: #{cmd.join(" ")}"
-
-    Thread.new do
-      done = false
-
-      # Watcher: renames .N.ts → N.ts once segment N is complete.
-      # Segment N is complete when .(N+1).ts has appeared (FFmpeg has moved on).
-      watcher = Thread.new do
-        renamed = Set.new
-        until done
-          Dir[tmp_dir.join(".*.ts")].sort.each_cons(2) do |a, _b|
-            n = File.basename(a)[/\.(\d+)\.ts/, 1]&.to_i
-            next unless n && !renamed.include?(n)
-            File.rename(a, tmp_dir.join("#{n}.ts"))
-            renamed.add(n)
-          end
-          sleep 0.2
-        end
-        # After FFmpeg exits, rename any remaining dotfiles
-        Dir[tmp_dir.join(".*.ts")].each do |f|
-          n = File.basename(f)[/\.(\d+)\.ts/, 1]
-          File.rename(f, tmp_dir.join("#{n}.ts")) if n
-        end
-      end
-
-      Open3.popen3(*cmd) do |_stdin, _stdout, stderr, wait_thr|
-        err = stderr.read
-        Rails.logger.info "HLS FFmpeg stderr: #{err}" if err.present?
-        wait_thr.value
-      end
-    rescue => e
-      Rails.logger.error "HLS FFmpeg error scene #{@scene.id}: #{e.message}"
-    ensure
-      done = true
-      watcher&.join
-      save_hls_timestamps(tmp_dir, config)
-      HLS_RUNNING.synchronize { HLS_PIDS.delete(@scene.id) }
-    end
-  end
-
-  def build_hls_ffmpeg_command(config, tmp_dir)
-    cmd = %w[ffmpeg -hide_banner -loglevel error]
-    cmd += ["-i", @scene.path]
-
-    if config[:video_copy]
-      cmd += %w[-c:v copy]
-    else
-      # Force keyframes at segment boundaries — only valid when transcoding, not with copy
-      cmd += %w[-flags +cgop -force_key_frames expr:gte(t,n_forced*2)]
-      cmd += %w[-c:v libx264 -preset veryfast -crf 23]
-    end
-
-    cmd += if config[:audio_transcode]
-      %w[-c:a aac -ac 2]
-    else
-      %w[-c:a copy]
-    end
-
-    cmd += %w[-sn -copyts -avoid_negative_ts disabled]
-    cmd += [
-      "-f", "hls",
-      "-start_number", "0",
-      "-hls_time", HLS_SEGMENT_DURATION.to_s,
-      "-hls_flags", "split_by_time",
-      "-hls_segment_type", "mpegts",
-      "-hls_playlist_type", "vod",
-      "-hls_segment_filename", tmp_dir.join(".%d.ts").to_s,
-      tmp_dir.join("manifest.m3u8").to_s
-    ]
-
-    cmd
   end
 
   # Parse FFmpeg's manifest and substitute segment filenames with our URL helpers.
@@ -217,19 +129,19 @@ class Scenes::StreamsController < ApplicationController
   # Calculated fallback manifest — used on fresh start before FFmpeg's manifest exists
   def generate_m3u8
     duration = @scene.duration.to_f
-    segment_count = (duration / HLS_SEGMENT_DURATION).ceil
-    last_duration = duration - ((segment_count - 1) * HLS_SEGMENT_DURATION)
+    segment_count = (duration / Canister::StreamManager::SEGMENT_DURATION).ceil
+    last_duration = duration - ((segment_count - 1) * Canister::StreamManager::SEGMENT_DURATION)
 
     lines = [
       "#EXTM3U",
       "#EXT-X-VERSION:3",
       "#EXT-X-MEDIA-SEQUENCE:0",
-      "#EXT-X-TARGETDURATION:#{HLS_SEGMENT_DURATION}",
+      "#EXT-X-TARGETDURATION:#{Canister::StreamManager::SEGMENT_DURATION}",
       "#EXT-X-PLAYLIST-TYPE:VOD"
     ]
 
     (0...segment_count).each do |i|
-      seg_duration = (i == segment_count - 1) ? last_duration : HLS_SEGMENT_DURATION.to_f
+      seg_duration = (i == segment_count - 1) ? last_duration : Canister::StreamManager::SEGMENT_DURATION.to_f
       lines << "#EXTINF:#{format("%.3f", seg_duration)},"
       lines << stream_hls_segment_scene_url(@scene, segment: i)
     end
@@ -255,27 +167,6 @@ class Scenes::StreamsController < ApplicationController
 
     lines << "#EXT-X-ENDLIST"
     lines.join("\n")
-  end
-
-  # Parse FFmpeg's completed manifest and persist #EXTINF durations for remux streams.
-  # Idempotent — skips if durations are already stored.
-  def save_hls_timestamps(tmp_dir, config)
-    return unless config[:video_copy]
-    return if Scene.where(id: @scene.id).where.not(hls_segment_durations: nil).exists?
-
-    manifest_path = tmp_dir.join("manifest.m3u8")
-    return unless manifest_path.exist?
-
-    durations = []
-    File.foreach(manifest_path) do |line|
-      if (m = line.match(/#EXTINF:([\d.]+),/))
-        durations << m[1].to_f
-      end
-    end
-    return if durations.empty?
-
-    Scene.find(@scene.id).update_column(:hls_segment_durations, durations)
-    Rails.logger.info "HLS: saved #{durations.size} timestamps for scene #{@scene.id}"
   end
 
   def build_ffmpeg_command(config, start_time)
