@@ -6,8 +6,8 @@ class ScanJob < ApplicationJob
     raise('Operation already in progress') unless @manager.status == :idle
   end
 
-  def perform(*args)
+  def perform(library_id = nil)
     @manager = Canister::Manager.instance
-    @manager.scan(job_id: provider_job_id, rake: false)
+    @manager.scan(job_id: provider_job_id, library_id: library_id)
   end
 end

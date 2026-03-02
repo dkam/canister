@@ -17,6 +17,9 @@ require "rails/test_unit/railtie"
 Bundler.require(*Rails.groups)
 
 module Canister
+  VIDEO_EXTENSIONS = %w[m4v mp4 mov wmv mkv avi flv webm].freeze
+  MEDIA_EXTENSIONS = (%w[zip] + VIDEO_EXTENSIONS).freeze
+
   class Application < Rails::Application
     # Initialize configuration defaults for originally generated Rails version.
     config.load_defaults 8.1

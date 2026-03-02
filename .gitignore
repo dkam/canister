@@ -27,6 +27,11 @@
 /transcodes/*
 !/transcodes/.keep
 
+# Ignore video files at root
+/*.mkv
+/*.mp4
+/*.avi
+
 # Ignore all logfiles and tempfiles.
 /log/*
 /tmp/*

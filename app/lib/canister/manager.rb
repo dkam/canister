@@ -1,5 +1,5 @@
-require 'singleton'
-require 'rake'
+require "singleton"
+require "rake"
 
 class Canister::Manager
   include Singleton
@@ -12,9 +12,7 @@ class Canister::Manager
   attr_accessor :current
   attr_accessor :total
 
-  def current=(value)
-    @current = value
-  end
+  attr_writer :current
 
   def initialize
     @logs = []
@@ -32,9 +30,9 @@ class Canister::Manager
     try {
       if !rake
         Rails.application.load_tasks
-        Rake::Task['db:drop'].invoke
-        Rake::Task['db:create'].invoke
-        Rake::Task['db:migrate'].invoke
+        Rake::Task["db:drop"].invoke
+        Rake::Task["db:create"].invoke
+        Rake::Task["db:migrate"].invoke
       end
 
       Canister::Tasks::Import.new.start
@@ -43,13 +41,12 @@ class Canister::Manager
     idle
   end
 
-  def export(job_id:, rake: true)
+  def export(job_id:)
     return unless @status == :idle
     @job_id = job_id
     @status = :export
     @message = "Exporting..."
     @logs = []
-    @rake = rake
 
     try {
       Canister::Tasks::Export.new.start
@@ -58,25 +55,24 @@ class Canister::Manager
     idle
   end
 
-  def scan(job_id:, rake: true)
+  def scan(job_id:, library_id: nil)
     return unless @status == :idle
     @job_id = job_id
     @status = :scan
     @message = "Scanning..."
     @logs = []
-    @rake = rake
 
     @current = 0
     @total = 0
-    Library.all.each do |library|
-      glob_path = File.join(library.path, "**", "*.{zip,m4v,mp4,mov,wmv,mkv,avi,flv,webm}")
-      scan_paths = Dir[glob_path]
+    libraries = library_id ? Library.where(id: library_id) : Library.all
+    libraries.each do |library|
+      scan_paths = library.backend.list_files(extensions: Canister::MEDIA_EXTENSIONS)
       @total += scan_paths.count
       info("Starting scan of #{scan_paths.count} files in #{library.name} (#{library.path})")
-      scan_paths.each { |path|
+      scan_paths.each { |relative_path|
         @current += 1
         try {
-          scan_task = Canister::Tasks::Scan.new(path: path, library: library)
+          scan_task = Canister::Tasks::Scan.new(path: relative_path, library: library)
           scan_task.start
         }
       }
@@ -90,15 +86,13 @@ class Canister::Manager
     sprites: true,
     previews: true,
     markers: true,
-    transcodes: true,
-    rake: true
+    transcodes: true
   )
     return unless @status == :idle
     @job_id = job_id
     @status = :generate
     @message = "Generating content..."
     @logs = []
-    @rake = rake
 
     @total = Scene.count
     Scene.all.each { |scene|
@@ -136,13 +130,12 @@ class Canister::Manager
     idle
   end
 
-  def clean(job_id:, rake: true)
+  def clean(job_id:)
     return unless @status == :idle
     @job_id = job_id
     @status = :clean
     @message = "Cleaning..."
     @logs = []
-    @rake = rake
 
     try {
       # TODO: Clean up more and add progress
@@ -152,13 +145,12 @@ class Canister::Manager
     idle
   end
 
-  def scrape(job_id:, scraper:, rake: true)
+  def scrape(job_id:, scraper:)
     return unless @status == :idle
     @job_id = job_id
     @status = :scrape
     @message = "Scraping..."
     @logs = []
-    @rake = rake
 
     try {
       # TODO: Clean up more and add progress
@@ -197,26 +189,25 @@ class Canister::Manager
 
   private
 
-    def idle
-      @status = :idle
-      @message = "Waiting..."
-      @current = 0
-      @total = 0
-      @rake = true
-    end
+  def idle
+    @status = :idle
+    @message = "Waiting..."
+    @current = 0
+    @total = 0
+  end
 
-    def add_log(message)
-      @logs.unshift(message)
-    end
+  def add_log(message)
+    @logs.unshift(message)
+  end
 
-    def try
-      yield
-    rescue ScriptError => e
-      error("#{e.inspect} --> #{e.backtrace.first}")
-    rescue => e
-      error("#{e.inspect} --> #{e.backtrace.first}")
-    rescue Exception => e
-      idle
-      raise e
-    end
+  def try
+    yield
+  rescue ScriptError => e
+    error("#{e.inspect} --> #{e.backtrace.first}")
+  rescue => e
+    error("#{e.inspect} --> #{e.backtrace.first}")
+  rescue Exception => e
+    idle
+    raise e
+  end
 end

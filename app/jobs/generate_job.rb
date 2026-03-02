@@ -8,6 +8,6 @@ class GenerateJob < ApplicationJob
 
   def perform(*args)
     @manager = Canister::Manager.instance
-    @manager.generate(job_id: provider_job_id, rake: false)
+    @manager.generate(job_id: provider_job_id)
   end
 end

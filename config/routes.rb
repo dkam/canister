@@ -39,6 +39,12 @@ Rails.application.routes.draw do
     end
   end
 
+  resources :libraries do
+    member do
+      post :scan
+    end
+  end
+
   resources :tags, only: [:index]
 
   resources :galleries, only: [:show] do

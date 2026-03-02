@@ -1,5 +1,5 @@
 marker:
-  scene: scene 
+  scene: scene
   title: 'Marker with One Tag'
   seconds: 5
-  primary_tag: tag_1
+  primary_tag: tag_0

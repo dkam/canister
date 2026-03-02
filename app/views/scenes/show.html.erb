@@ -164,10 +164,10 @@
              <p class="font-semibold mb-1">Checksums:</p>
              <% @scene.checksums.group_by(&:checksum_type).each do |type, checksums| %>
                <p class="mt-1 flex items-center gap-2">
-                 <strong><%= type.humanize %>:</strong>
+                 <strong><%= type&.humanize || 'Unknown' %>:</strong>
                  <% checksums.each do |checksum| %>
                    <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs"><%= checksum.hash_value %></code>
-                   <% if checksum.checksum_type == 'opensubtitles' %>
+                   <% if checksum.checksum_type.to_s == 'opensubtitles' %>
                      <span class="text-indigo-600 dark:text-indigo-400 text-[10px]">(default)</span>
                    <% end %>
                  <% end %>

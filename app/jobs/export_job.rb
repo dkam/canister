@@ -8,6 +8,6 @@ class ExportJob < ApplicationJob
 
   def perform(*args)
     @manager = Canister::Manager.instance
-    @manager.export(job_id: provider_job_id, rake: false)
+    @manager.export(job_id: provider_job_id)
   end
 end
