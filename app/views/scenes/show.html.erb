@@ -34,30 +34,67 @@
     <%# Left: metadata %>
     <div class="lg:w-72 xl:w-80 shrink-0 mb-6 lg:mb-0">
 
-      <%# Title + studio %>
+      <%# Title + studio + rating %>
       <div class="flex items-start justify-between gap-3 mb-4">
         <div class="flex-1 min-w-0">
-          <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100 leading-snug">
-            <%= @scene.title.presence || File.basename(@scene.path, ".*") %>
-          </h1>
+          <div data-controller="inline-edit"
+               data-inline-edit-url-value="<%= scene_path(@scene) %>"
+               data-inline-edit-field-value="title"
+               class="rounded transition-all">
+            <h1 data-inline-edit-target="display"
+                data-action="click->inline-edit#edit"
+                data-placeholder="Untitled"
+                class="text-xl font-bold text-gray-900 dark:text-gray-100 leading-snug cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+              <%= @scene.title.presence || File.basename(@scene.path, ".*") %>
+            </h1>
+            <input type="text"
+                   data-inline-edit-target="input"
+                   data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                   data-original-value="<%= @scene.title %>"
+                   value="<%= @scene.title %>"
+                   class="w-full text-xl font-bold bg-transparent border border-indigo-400 rounded px-1 py-0.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   hidden>
+          </div>
           <% if @scene.studio.present? %>
             <%= link_to @scene.studio.name, studio_path(@scene.studio),
                   class: "text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium" %>
           <% end %>
         </div>
-        <% if @scene.rating.present? && @scene.rating > 0 %>
-          <div class="text-base shrink-0"><%= rating_stars(@scene.rating) %></div>
-        <% end %>
+        <div data-controller="star-rating"
+             data-star-rating-url-value="<%= scene_path(@scene) %>"
+             data-star-rating-rating-value="<%= @scene.rating || 0 %>"
+             class="shrink-0 flex gap-0.5">
+          <% 5.times do |i| %>
+            <button data-star-rating-target="star"
+                    data-action="click->star-rating#set"
+                    data-index="<%= i %>"
+                    type="button"
+                    class="text-gray-400 cursor-pointer text-lg">★</button>
+          <% end %>
+        </div>
       </div>
 
       <%# Quick stats %>
       <dl class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4 text-sm">
-        <% if @scene.date.present? %>
-          <div>
-            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</dt>
-            <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @scene.date.strftime("%b %-d, %Y") %></dd>
-          </div>
-        <% end %>
+        <div data-controller="inline-edit"
+             data-inline-edit-url-value="<%= scene_path(@scene) %>"
+             data-inline-edit-field-value="date"
+             class="rounded transition-all">
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</dt>
+          <dd data-inline-edit-target="display"
+              data-action="click->inline-edit#edit"
+              data-placeholder="—"
+              class="font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+            <%= @scene.date.present? ? @scene.date.strftime("%b %-d, %Y") : "—" %>
+          </dd>
+          <input type="date"
+                 data-inline-edit-target="input"
+                 data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                 data-original-value="<%= @scene.date %>"
+                 value="<%= @scene.date %>"
+                 class="w-full text-sm bg-transparent border border-indigo-400 rounded px-1 py-0.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 hidden>
+        </div>
         <% if @scene.duration.present? %>
           <div>
             <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</dt>
@@ -90,13 +127,25 @@
         <% end %>
       </dl>
 
-      <%# Details/description %>
-      <% if @scene.details.present? %>
-        <div class="mb-4">
-          <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Details</h3>
-          <p class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed"><%= @scene.details %></p>
-        </div>
-      <% end %>
+      <%# Details/description — inline editable %>
+      <div class="mb-4"
+           data-controller="inline-edit"
+           data-inline-edit-url-value="<%= scene_path(@scene) %>"
+           data-inline-edit-field-value="details">
+        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Details</h3>
+        <p data-inline-edit-target="display"
+           data-action="click->inline-edit#edit"
+           data-placeholder="Click to add details…"
+           class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+          <%= @scene.details.presence || "Click to add details…" %>
+        </p>
+        <textarea data-inline-edit-target="input"
+                  data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                  data-original-value="<%= @scene.details %>"
+                  rows="4"
+                  class="w-full text-sm bg-transparent border border-indigo-400 rounded px-2 py-1 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  hidden><%= @scene.details %></textarea>
+      </div>
 
       <%# Tags %>
       <% if @scene.tags.any? %>
@@ -141,8 +190,22 @@
 
     <%# Right: performers %>
     <div class="flex-1 min-w-0">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">People</h2>
+
+      <%# TomSelect people picker %>
+      <div class="mb-4"
+           data-controller="people-select"
+           data-people-select-url-value="<%= scene_path(@scene) %>"
+           data-people-select-search-url-value="<%= search_people_path(format: :json) %>"
+           data-people-select-create-url-value="<%= people_path %>">
+        <select multiple placeholder="Search or add people…">
+          <% @scene.performers.each do |performer| %>
+            <option value="<%= performer.id %>" selected><%= performer.name %></option>
+          <% end %>
+        </select>
+      </div>
+
       <% if @scene.performers.any? %>
-        <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">Performers</h2>
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
           <% @scene.performers.each do |performer| %>
             <%= render "shared/person_card", person: performer %>

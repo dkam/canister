@@ -7,7 +7,7 @@ Rails.application.routes.draw do
 
   root to: "scenes#index"
 
-  resources :scenes, only: [:index, :show] do
+  resources :scenes, only: [:index, :show, :update] do
     member do
       get :stream, to: "scenes/streams#stream"
       get :stream_mp4, to: "scenes/streams#stream_mp4"
@@ -27,7 +27,10 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :people, only: [:index, :show] do
+  resources :people, only: [:index, :show, :create] do
+    collection do
+      get :search
+    end
     member do
       get :image
     end

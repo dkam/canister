@@ -10,6 +10,65 @@
   }
 }
 
+/* Pagy pagination */
+.pagy.series-nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.5rem 0;
+}
+
+.pagy.series-nav a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 2.25rem;
+  height: 2.25rem;
+  padding: 0 0.5rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-gray-600);
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.pagy.series-nav a:hover:not([aria-disabled="true"]) {
+  background-color: var(--color-gray-100);
+  color: var(--color-gray-900);
+}
+
+.pagy.series-nav a[aria-current="page"] {
+  background-color: var(--color-indigo-600);
+  color: white;
+}
+
+.pagy.series-nav a[aria-disabled="true"]:not([aria-current="page"]) {
+  color: var(--color-gray-400);
+  cursor: default;
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .pagy.series-nav a {
+    color: var(--color-gray-400);
+  }
+
+  .pagy.series-nav a:hover:not([aria-disabled="true"]) {
+    background-color: var(--color-gray-700);
+    color: var(--color-gray-100);
+  }
+
+  .pagy.series-nav a[aria-current="page"] {
+    background-color: var(--color-indigo-500);
+    color: white;
+  }
+
+  .pagy.series-nav a[aria-disabled="true"]:not([aria-current="page"]) {
+    color: var(--color-gray-600);
+  }
+}
+
 /* Hide default video.js big play button — replaced by custom overlay */
 .vjs-big-play-button {
   display: none !important;
@@ -76,4 +135,43 @@
   opacity: 0.3;
   cursor: default;
   pointer-events: none;
+}
+
+/* TomSelect dark mode overrides */
+@media (prefers-color-scheme: dark) {
+  .ts-wrapper .ts-control {
+    background-color: var(--color-gray-800);
+    border-color: var(--color-gray-600);
+    color: var(--color-gray-100);
+  }
+  .ts-wrapper .ts-control input {
+    color: var(--color-gray-100);
+  }
+  .ts-wrapper .ts-control .item {
+    background-color: var(--color-indigo-600);
+    color: white;
+    border-color: var(--color-indigo-500);
+  }
+  .ts-wrapper .ts-control .item .remove {
+    color: rgba(255, 255, 255, 0.6);
+    border-color: rgba(255, 255, 255, 0.2);
+  }
+  .ts-wrapper .ts-control .item .remove:hover {
+    color: white;
+  }
+  .ts-dropdown {
+    background-color: var(--color-gray-800);
+    border-color: var(--color-gray-600);
+    color: var(--color-gray-100);
+  }
+  .ts-dropdown .active {
+    background-color: var(--color-indigo-600);
+    color: white;
+  }
+  .ts-dropdown .option:hover {
+    background-color: var(--color-gray-700);
+  }
+  .ts-dropdown .create {
+    color: var(--color-gray-300);
+  }
 }

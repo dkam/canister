@@ -1,5 +1,5 @@
 class ScenesController < ApplicationController
-  before_action :set_scene, only: [:show, :screenshot, :preview, :webp, :vtt, :chapter_vtt]
+  before_action :set_scene, only: [:show, :update, :screenshot, :preview, :webp, :vtt, :chapter_vtt]
 
   # GET /scenes
   def index
@@ -27,6 +27,22 @@ class ScenesController < ApplicationController
   def show
     @markers = @scene.scene_markers.includes(:primary_tag)
     @stream_endpoints = build_stream_endpoints(@scene)
+  end
+
+  # PATCH /scenes/:id
+  def update
+    performer_ids = params[:scene].delete(:performer_ids) if params[:scene]&.key?(:performer_ids)
+
+    if @scene.update(scene_update_params)
+      @scene.performer_ids = performer_ids.map(&:to_s) if performer_ids
+      render json: {
+        success: true,
+        date_display: @scene.date&.strftime("%b %-d, %Y"),
+        rating: @scene.rating
+      }
+    else
+      render json: { success: false, errors: @scene.errors.full_messages }, status: :unprocessable_entity
+    end
   end
 
   def screenshot
@@ -97,6 +113,10 @@ class ScenesController < ApplicationController
         audio_transcode: s[:audio_transcode]
       )
     end
+  end
+
+  def scene_update_params
+    params.require(:scene).permit(:title, :details, :date, :rating)
   end
 
   def scene_filter_params

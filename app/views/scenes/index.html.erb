@@ -47,7 +47,7 @@
       </div>
 
       <%# Scenes list (Turbo Frame target for filter updates) %>
-      <turbo-frame id="scenes" data-controller="queue">
+      <turbo-frame id="scenes" data-turbo-action="advance" data-controller="queue">
         <%# Grid view (default) %>
         <div data-view-mode-target="gridContainer"
              class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 xl:grid-cols-4 gap-4">

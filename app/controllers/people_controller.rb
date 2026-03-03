@@ -14,6 +14,24 @@ class PeopleController < ApplicationController
     @pagy, @scenes = pagy(@person.scenes.includes(:studio))
   end
 
+  # GET /people/search.json?q=term
+  def search
+    people = Performer.order(:name)
+    people = people.search_for(params[:q]) if params[:q].present?
+    render json: people.limit(20).map { |p| { id: p.id, name: p.name } }
+  end
+
+  # POST /people
+  def create
+    performer = Performer.new(name: params[:name])
+    performer.skip_image_validation = true
+    if performer.save
+      render json: { id: performer.id, name: performer.name }, status: :created
+    else
+      render json: { errors: performer.errors.full_messages }, status: :unprocessable_entity
+    end
+  end
+
   def image
     return head :not_found unless @person.image.attached?
     

@@ -5,7 +5,8 @@ class Performer < ApplicationRecord
   has_and_belongs_to_many :scenes
   has_and_belongs_to_many :galleries
 
-  validate :image_attached
+  attr_accessor :skip_image_validation
+  validate :image_attached, unless: :skip_image_validation
 
   scoped_search on: [:name, :birthdate, :ethnicity]
 
