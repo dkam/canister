@@ -63,23 +63,13 @@ class Scenes::StreamsController < ApplicationController
     response.stream.close
   end
 
-  # HLS manifest — three-tier resolution:
-  #   1. Stored timestamps (remux only) — serve immediately, restart FFmpeg only if segments gone
-  #   2. FFmpeg manifest on disk — reuse live/completed manifest
-  #   3. Fresh start — calculated fallback while FFmpeg runs
+  # HLS manifest — estimated uniform segments, process starts on first segment request
   def stream_hls
     stream_config = @scene.available_streams.find { |s| s[:kind] == :hls }
     return head :not_found unless stream_config
 
-    tmp_dir = hls_tmp_dir
-    ffmpeg_manifest = tmp_dir.join("manifest.m3u8")
-
-    Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
-
-    manifest = if @scene.hls_segment_durations.present? && stream_config[:video_copy]
-      build_manifest_from_durations(@scene.hls_segment_durations)
-    else
-      generate_m3u8
+    manifest = Hls::ManifestBuilder.resolve(@scene, stream_config) do |segment_idx|
+      stream_hls_segment_scene_url(@scene, segment: segment_idx)
     end
 
     render plain: manifest, content_type: "application/vnd.apple.mpegurl"
@@ -91,9 +81,10 @@ class Scenes::StreamsController < ApplicationController
     config = @scene.available_streams.find { |s| s[:kind] == :hls }
     return head :not_found unless config
 
-    result = Canister::StreamManager.instance.request_segment(@scene, segment, config)
+    result = Hls::StreamManager.instance.request_segment(@scene, segment, config)
     if result == :ok
-      send_file hls_tmp_dir.join("#{segment}.ts"), disposition: "inline", type: "video/MP2T"
+      send_file Hls::StreamManager.instance.cache.hls_dir(@scene.id).join("#{segment}.ts"),
+        disposition: "inline", type: "video/MP2T"
     else
       head :not_found
     end
@@ -101,68 +92,8 @@ class Scenes::StreamsController < ApplicationController
 
   private
 
-  def hls_tmp_dir
-    Rails.root.join("tmp", "hls", @scene.id.to_s)
-  end
-
   def set_scene
     @scene = Scene.find(params[:id])
-  end
-
-  # Parse FFmpeg's manifest and substitute segment filenames with our URL helpers.
-  # Handles both bare filenames ("42.ts") and dotfile names (".42.ts").
-  def rewrite_ffmpeg_manifest(ffmpeg_manifest)
-    lines = File.readlines(ffmpeg_manifest, chomp: true).map do |line|
-      if (m = line.match(/\A\.?(\d+)\.ts\z/))
-        stream_hls_segment_scene_url(@scene, segment: m[1].to_i)
-      else
-        line
-      end
-    end
-    lines.join("\n")
-  end
-
-  # Calculated fallback manifest — used on fresh start before FFmpeg's manifest exists
-  def generate_m3u8
-    duration = @scene.duration.to_f
-    segment_count = (duration / Canister::StreamManager::SEGMENT_DURATION).ceil
-    last_duration = duration - ((segment_count - 1) * Canister::StreamManager::SEGMENT_DURATION)
-
-    lines = [
-      "#EXTM3U",
-      "#EXT-X-VERSION:3",
-      "#EXT-X-MEDIA-SEQUENCE:0",
-      "#EXT-X-TARGETDURATION:#{Canister::StreamManager::SEGMENT_DURATION}",
-      "#EXT-X-PLAYLIST-TYPE:VOD"
-    ]
-
-    (0...segment_count).each do |i|
-      seg_duration = (i == segment_count - 1) ? last_duration : Canister::StreamManager::SEGMENT_DURATION.to_f
-      lines << "#EXTINF:#{format("%.3f", seg_duration)},"
-      lines << stream_hls_segment_scene_url(@scene, segment: i)
-    end
-
-    lines << "#EXT-X-ENDLIST"
-    lines.join("\n")
-  end
-
-  # Build manifest from previously stored #EXTINF durations (remux streams only).
-  def build_manifest_from_durations(durations)
-    lines = [
-      "#EXTM3U",
-      "#EXT-X-VERSION:3",
-      "#EXT-X-MEDIA-SEQUENCE:0",
-      "#EXT-X-TARGETDURATION:#{durations.max.ceil}",
-      "#EXT-X-PLAYLIST-TYPE:VOD"
-    ]
-
-    durations.each_with_index do |d, i|
-      lines << "#EXTINF:#{format("%.3f", d)},"
-      lines << stream_hls_segment_scene_url(@scene, segment: i)
-    end
-
-    lines << "#EXT-X-ENDLIST"
-    lines.join("\n")
   end
 
   def build_ffmpeg_command(config, start_time)

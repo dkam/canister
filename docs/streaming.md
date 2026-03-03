@@ -256,7 +256,12 @@ Progressive MP4 streaming uses smart codec selection:
 |------|---------|
 | `app/models/concerns/streamable.rb` | Stream configuration generation with codec flags |
 | `app/controllers/scenes/streams_controller.rb` | Direct streaming, progressive MP4, HLS manifest + segment serving |
-| `app/lib/canister/stream_manager.rb` | HLS FFmpeg lifecycle singleton (buffer, seek, LRU eviction) |
+| `app/services/hls/stream_manager.rb` | Singleton orchestrator — delegates to Primary, Quantum, Cache, Manifest |
+| `app/services/hls/primary_process.rb` | Primary FFmpeg lifecycle — runs to completion, incremental duration saving |
+| `app/services/hls/quantum_process.rb` | Short-lived quantum FFmpeg processes for seek/on-demand playback |
+| `app/services/hls/ffmpeg_command.rb` | FFmpeg command building for both primary and quantum modes |
+| `app/services/hls/manifest_builder.rb` | Four-tier manifest generation |
+| `app/services/hls/segment_cache.rb` | LRU cache, eviction, disk operations |
 | `app/controllers/scenes_controller.rb` | Stream endpoint URL building |
 | `config/routes.rb` | Route definitions |
 
@@ -274,365 +279,157 @@ Progressive MP4 streaming uses smart codec selection:
 
 ---
 
-## HLS Streaming Lifecycle
+## HLS Streaming Architecture
 
-HLS uses a kill-and-restart pattern rather than running FFmpeg to completion. FFmpeg runs ahead by a fixed buffer, gets killed when the buffer is full, and restarts on demand when the viewer needs uncached segments.
+Two complementary FFmpeg modes — **Primary** and **Quantum** — work together to provide HLS streaming with accurate manifests. Primary produces seamless playback (continuous encode). Quantum provides instant seek but may have micro-glitches at boundaries for transcoded streams (not an issue for remux).
 
-### Constants (`Canister::StreamManager`)
+### Concepts
+
+**Primary FFmpeg** — a single long-running process per scene that starts at segment 0 and runs to completion. It writes the canonical `manifest.m3u8` progressively and saves segment durations incrementally to the database. The primary is never killed — it always runs to completion. If it crashes or the server restarts, it resumes from the last stored segment using exact timestamps. For remux at ~10x realtime, a 2-hour video finishes in ~12 minutes.
+
+**Quantum FFmpeg** — a short-lived, self-terminating process spawned on demand for seek playback and prefetch. Each quantum covers a fixed range of segments and exits naturally via `-t`. Quantums provide immediate playback anywhere in the video. Once all durations are stored from a completed primary run, quantums are all that's needed for all future plays — the primary doesn't need to run again.
+
+### Constants (`Hls::StreamManager`)
 
 | Constant | Value | Purpose |
 |---|---|---|
 | `SEGMENT_DURATION` | 2s | Seconds per `.ts` segment |
-| `MAX_SEGMENT_BUFFER` | 15 | Kill FFmpeg when 15 segments ahead of last requested (30s runway) |
-| `MAX_SEGMENT_GAP` | 5 | Restart if request is >5 segments ahead of highest generated |
-| `MAX_IDLE_TIME` | 30s | Kill FFmpeg after 30s with no segment requests |
-| `KEEP_FIRST_SEGMENTS` | 15 | Always preserve segments 0–14 in cache (fast start on revisit) |
+| `SEGMENT_WAIT_TIMEOUT` | 15s | Max seconds to wait for segment before returning 404 |
+| `MAX_SEGMENT_GAP` | 5 | Spawn quantum if request is >5 segments ahead of primary |
+| `PREFETCH_HORIZON` | 10 | Preemptively spawn quantum when fewer than 10 segments ahead on disk |
+| `SEGMENTS_PER_QUANTUM` | 10 | Segments per quantum (20 seconds of content) |
+| `KEEP_FIRST_SEGMENTS` | 15 | Always preserve segments 0–14 during cache eviction |
 | `MAX_CACHE_SIZE` | 5GB | LRU eviction threshold (override with `HLS_MAX_CACHE_SIZE_GB` env var) |
+
+### Stored Segment Durations
+
+Durations are stored in `Scene#hls_segment_durations` as a hash keyed by segment index (string keys in JSON): `{"0" => 1.999, "1" => 2.001, ...}`. This enables:
+
+- **Incremental saving** — durations are persisted on every monitor tick as the primary generates segments. If the primary crashes at segment 500, durations 0-499 are already in the DB.
+- **Resumable primary** — on restart, the primary resumes from the last stored segment with `-ss` computed as the sum of all stored durations (exact timestamp).
+- **Exact quantum seeks** — quantum `-ss` is computed by summing stored durations for all segments before its start point.
+- **Completion detection** — `durations.size >= total_segments` means the primary has finished. No separate boolean needed.
+
+Both remux and transcode streams save durations (no `video_copy` gate).
 
 ### Request Flow
 
-**1. Manifest request (`stream_hls`) — three-tier resolution:**
+**1. Manifest request (`stream_hls`) — four-tier resolution:**
 
 ```
-1. hls_segment_durations stored in DB (remux streams only) → serve immediately
-   └─ If segments not on disk: tell StreamManager to ensure FFmpeg is running
-2. manifest.m3u8 exists in tmp/hls/{id}/ → rewrite segment filenames to app URLs
-3. Fresh start → StreamManager starts FFmpeg, serve calculated manifest (uniform 2s durations)
+1. manifest.m3u8 on disk with #EXT-X-ENDLIST (primary finished) → rewrite segment URLs
+2. manifest.m3u8 on disk without #EXT-X-ENDLIST (primary running) → rewrite segment URLs
+3. hls_segment_durations hash in DB → reconstruct exact manifest from stored values
+4. No data (never played) → serve estimated uniform-2s manifest, start primary
 ```
 
 **2. Segment request (`stream_hls_segment`):**
 
 ```
 Browser → GET /scenes/{id}/stream_hls/42
-StreamManager checks disk → segment exists? → send_file immediately (cache hit)
-                          → no?
-                              FFmpeg running?
-                                no  → start FFmpeg at segment 42
-                                yes → gap too large? → kill, restart at 42
-                                    → otherwise update last_requested, wait
-                          → wait on ConditionVariable (monitor broadcasts on each rename)
-                          → segment appears → send_file
-                          → timeout (15s) → 404
+  ├─ Segment on disk → prefetch_ahead(), serve immediately
+  └─ Not on disk:
+       ├─ Primary running and close (within MAX_SEGMENT_GAP) → wait on CV
+       └─ Otherwise → spawn quantum, wait on CV
+           └─ Timeout (15s) → 404
 ```
 
-**3. Monitor thread (runs every 200ms):**
+**3. Prefetch (runs on every cache-hit segment request):**
 
 ```
-For each active stream:
-  ├─ Rename completed dotfiles (.N.ts → N.ts), broadcast ConditionVariable
-  ├─ Detect dead FFmpeg → final rename, save timestamps if full run from segment 0
-  ├─ Buffer full? (15 consecutive segments from last_requested) → kill FFmpeg
-  └─ Idle? (30s no requests) → kill FFmpeg
+Count consecutive segments ahead of current request
+  └─ Fewer than PREFETCH_HORIZON (10) segments ahead?
+       └─ Primary not running? → spawn quantum for first missing segment's range
+```
+
+This prevents stalls during sequential playback — the quantum starts generating the next batch of segments while the player still has ~20 seconds of buffered content.
+
+**4. Monitor thread (runs every 200ms):**
+
+```
+For each primary with a PID (including just-exited):
+  ├─ Rename completed dotfiles (.N.ts → N.ts), broadcast CV
+  ├─ Detect natural exit → final rename, save durations from manifest
+  └─ Incremental duration saving on each tick (if new segments renamed)
+
+For each quantum:
+  ├─ Rename completed dotfiles, broadcast CV
+  ├─ Detect natural exit → final rename
+  └─ Clean up 0-byte dotfiles (only after FFmpeg exits)
 
 After stream checks:
-  └─ LRU eviction: remove segments beyond first 15 from least-recently-used scenes
-     until total tmp/hls/ size is under MAX_CACHE_SIZE
+  └─ LRU eviction (skipping scenes with active primary)
 ```
 
 ### Dotfile Pattern
 
-FFmpeg writes segments as `.N.ts` (dotfiles) while they are open for writing. The monitor renames `.N.ts → N.ts` once the *next* dotfile appears, guaranteeing the segment is complete before it is served.
+Both primary (`-f hls`) and quantum (`-f segment`) write segments as dotfiles (`.N.ts`). The monitor renames `.N.ts → N.ts` once the *next* dotfile appears, guaranteeing the segment is complete before serving.
 
 ```
 FFmpeg writing:  .0.ts  .1.ts  .2.ts  .3.ts ...
-After rename:     0.ts   1.ts   2.ts          ← 3 is still open, not renamed yet
+After rename:     0.ts   1.ts   2.ts          ← .3.ts still being written
 ```
 
-### Sequence Diagrams
+**Primary** uses `each_cons(2)` — safe because primary writes sequentially and the last dotfile is renamed on exit detection.
 
-**Happy path: play, pause, resume**
+**Quantum** uses `each_cons(2)` while running, then renames all remaining non-zero dotfiles on exit. The 0-byte cleanup only runs after FFmpeg exits — cleaning up 0-byte files while FFmpeg is running races with file creation (FFmpeg creates a 0-byte file, monitor deletes it, FFmpeg writes to the now-deleted inode, segment is lost).
 
+### Primary Lifecycle
+
+**First play:**
 ```
-Browser              Controller              StreamManager              FFmpeg
-   |                     |                        |                        |
-   |-- GET segment 0 --> |                        |                        |
-   |                     |-- request_segment(0) ->|                        |
-   |                     |                        |-- spawn ffmpeg at 0 -->|
-   |                     |  wait on CV ...        |                        |-- writes .0.ts, .1.ts...
-   |                     |                        |<-- monitor renames, broadcasts CV
-   |<-- serve 0.ts ------|                        |                        |
-   |                     |                        |                        |
-   |-- GET segment 1 --> |                        |                        |
-   |                     |-- request_segment(1) ->|  (already running)     |
-   |                     |<- 1.ts exists (hit)    |                        |
-   |<-- serve 1.ts ------|                        |                        |
-   |                     |                        |                        |
-   | ... segments 2-15 served from cache ...      |                        |
-   |                     |                        |                        |
-   | (user pauses)       |                        |-- monitor: buffer full |
-   |                     |                        |-- SIGTERM ffmpeg       |
-   |                     |                        |                  (dies)|
-   |                     |                        |                        |
-   | (user resumes)      |                        |                        |
-   |-- GET segment 16 -->|                        |                        |
-   |                     |-- request_segment(16)->|                        |
-   |                     |                        |-- spawn ffmpeg at 16 ->|
-   |                     |  wait on CV ...        |                        |-- writes .16.ts...
-   |<-- serve 16.ts -----|                        |                        |
+1. ensure_running() → primary starts at segment 0
+2. Primary writes manifest.m3u8 + dotfile segments (.N.ts)
+3. Monitor renames dotfiles, saves durations incrementally to DB
+4. Primary finishes → complete manifest on disk, all durations in DB
 ```
 
-**Seek forward (beyond gap)**
+**Resumable:** If `hls_segment_durations` exists but is incomplete, the primary resumes from the last stored segment with `-ss` = sum of all stored durations. This is an exact timestamp — no keyframe mismatch.
 
+**Complete durations:** If `hls_segment_durations.size >= total_segments`, the primary skips entirely — all future plays use quantum only.
+
+### Quantum Lifecycle
+
+Segments are grouped into fixed, non-overlapping windows:
 ```
-Browser              Controller              StreamManager              FFmpeg
-   |                     |                        |                        |
-   | (playing segment 5) |                        |  (ffmpeg at segment 8) |
-   |                     |                        |                        |
-   | (seek to 1:30:00 = segment 2700)             |                        |
-   |-- GET segment 2700->|                        |                        |
-   |                     |-- request_segment(2700)|                        |
-   |                     |                        |  2700 > 8+5 → gap!     |
-   |                     |                        |-- SIGTERM old ffmpeg   |
-   |                     |                        |-- spawn at 2700 ------>|
-   |                     |  wait on CV ...        |                        |-- writes .2700.ts...
-   |<-- serve 2700.ts ---|                        |                        |
+Quantum size: 20 seconds = 10 segments (at 2s/segment)
+Boundaries:   0s, 20s, 40s, 60s, ... (segment 0, 10, 20, 30, ...)
+quantum_start = (segment_idx / SEGMENTS_PER_QUANTUM) * SEGMENTS_PER_QUANTUM
 ```
 
-**Idle timeout**
+**Guards before spawning:**
+1. `running_for?` — don't spawn if a live quantum already covers this segment
+2. `dest.exist?` — don't spawn if the requested segment already exists on disk
 
-```
-Browser              Controller              StreamManager              FFmpeg
-   |                     |                        |                        |
-   | (tab closed)        |                        |  (ffmpeg running)      |
-   |                     |                        |                        |
-   |                     |                        |  30s no requests       |
-   |                     |                        |-- SIGTERM ffmpeg       |
-   |                     |                        |  (files kept on disk)  |
-```
+**Primary always wins:** when primary's monitor renames a segment, it atomically overwrites any quantum-generated segment at that position. Primary segments are canonical (continuous boundaries from segment 0).
 
-### Seek Behaviour
+### Quantum `-ss` Timestamp Modes
 
-| Scenario | Behaviour |
-|---|---|
-| Backward seek, segment cached | Instant — cache hit, no FFmpeg interaction |
-| Backward seek, segment not cached | Kill + restart at seek position (~1–2s pause) |
-| Forward seek within buffer | Cache hit |
-| Forward seek beyond `MAX_SEGMENT_GAP` | Kill + restart at seek position |
-| Pause (buffer fills) | Monitor kills FFmpeg; restarts on next segment request |
-| Close tab / idle 30s | Monitor kills FFmpeg |
-| Two tabs, same video | One FFmpeg process; both viewers share cached segments |
+| Mode | When | `-ss` value | Boundary quality |
+|---|---|---|---|
+| Exact | Stored durations exist for segments 0 through `quantum_start - 1` | Sum of stored durations | Identical to primary — no discontinuity |
+| Estimated | No stored durations for the full range | `quantum_start * SEGMENT_DURATION` | Approximate — minor keyframe mismatch (remux only) |
 
-### Multiple Puma Workers
+For transcode streams (forced keyframes at 2s), both modes produce identical results — the distinction only matters for remux.
 
-Each worker has its own `StreamManager` instance and its own PID tracking. Coordination happens through the filesystem — if another worker's FFmpeg already generated a segment, the `.ts` file exists and is served immediately. Duplicate spawns are prevented within a worker; two workers may briefly both spawn FFmpeg for the same scene, but the second one will be killed promptly by its own buffer-full check.
+### Segment Duration Behaviour
 
-### Segment Duration Behaviour (Remux Streams)
+**Transcode streams** (`video_copy: false`): Forced keyframes at 2s intervals (`-force_key_frames expr:gte(t,n_forced*2)`) produce uniform segment durations. All segments are exactly 2.000s (except the last).
 
-For transcoded streams, forced keyframes at 2s intervals produce uniform segment durations. This section only applies to remux (`video_copy: true`).
-
-FFmpeg uses `-hls_time 2 -hls_flags split_by_time`. The `split_by_time` flag is critical — it makes FFmpeg track **absolute** split targets from the stream start (2s, 4s, 6s, ...) and split at the next keyframe at or after each target. This is different from the default behaviour (relative timing, where each segment is at least `hls_time` after the previous split).
+**Remux streams** (`video_copy: true`): `-hls_flags split_by_time` tracks **absolute** split targets (2s, 4s, 6s, ...) and splits at the next keyframe at or after each target:
 
 ```
 Keyframes at:  0    2.3   4.5   6.1   8.7   ...
 Target splits: 2s   4s    6s    8s    10s   ...
 Actual splits: 2.3  4.5   6.1   8.7   ...
 Segment durs:  2.3  2.2   1.6   2.6   ...
-                          ^^^
-                    shorter than 2s — compensating for prior overshoot
 ```
 
-Because targets are absolute, segments can be both shorter and longer than 2s. When one segment overshoots its target significantly, the next segment is shorter to compensate. Drift is bounded by keyframe spacing (not compounding), and the average converges toward 2s over time. This means the calculated uniform-2s manifest is a reasonable approximation, with seek position error bounded to at most one keyframe interval at any point.
-
-### Stored Segment Durations
-
-For remux streams, after a **full run from segment 0**, the actual `#EXTINF` durations are parsed from `manifest.m3u8` and stored in `Scene#hls_segment_durations`. Subsequent plays serve the accurate manifest immediately without waiting for FFmpeg.
-
-Durations are **not** saved for partial runs (seeks) because the segment boundaries shift with each restart, making stored values meaningless for other start positions.
-
-### Boundary Discontinuities
-
-Every time FFmpeg is killed and restarted (buffer full, seek), the new invocation seeks to the nearest keyframe at or before the target timestamp. This keyframe may not align with where the previous invocation's last segment ended — producing a small overlap or gap at the boundary. For the current implementation with a 30-second buffer, this discontinuity occurs approximately every 30 seconds during continuous remux playback (FFmpeg fills the buffer in ~3s, gets killed, player catches up in ~27s, restart). HLS players tolerate these discontinuities well — they are inherent to any restart-based HLS system and common in live streams.
+Drift is bounded by keyframe spacing, and the average converges toward 2s. The estimated uniform-2s manifest is a reasonable approximation for first play.
 
 ### Cache Eviction
 
-Segments are stored in `tmp/hls/{scene_id}/`. When total size exceeds `MAX_CACHE_SIZE`, the monitor evicts least-recently-accessed scenes, preserving segments 0–14 (`KEEP_FIRST_SEGMENTS`) for fast restart. Scenes with active FFmpeg processes are never evicted.
-
----
-
-## Primary + Quantum FFmpeg
-
-Two complementary FFmpeg modes work together to provide seamless HLS with accurate manifests.
-
-### Concepts
-
-**Primary FFmpeg** — a single long-running process per scene that starts at segment 0 and runs to completion. It writes the canonical `manifest.m3u8` progressively as it generates segments. The primary is the source of truth: its segments have continuous, unbroken boundaries from the start of the video, and its manifest contains exact `#EXTINF` durations for every segment. The primary is never killed during normal operation — only on idle timeout (tab closed, 30s no requests) or server shutdown.
-
-**Quantum FFmpeg** — a short-lived process spawned on demand for seeks to uncached positions. Each quantum covers a fixed range of segments and self-terminates via `-t`. Quantums provide immediate playback while the primary is still catching up. Quantum FFmpeg must **not** write a manifest file — it only produces `.ts` segments. The primary's manifest is the single source of truth.
-
-### Quantum Design
-
-Segments are grouped into fixed, non-overlapping windows aligned to quantum boundaries from the start of the video:
-
-```
-Quantum size: 20 seconds = 10 segments (at 2s/segment)
-Boundaries:   0s, 20s, 40s, 60s, ... (segment 0, 10, 20, 30, ...)
-```
-
-The quantum a segment belongs to is simply:
-```ruby
-quantum_start = (segment_idx / SEGMENTS_PER_QUANTUM) * SEGMENTS_PER_QUANTUM
-```
-
-Each quantum FFmpeg is launched with `-ss {start_time} -t 20 -start_number {quantum_start}` and no manifest output flags. It writes its 10 segments and exits cleanly.
-
-### Lifecycle
-
-**First play:**
-
-```
-1. Primary FFmpeg starts at segment 0, runs toward end of video
-2. Primary writes manifest.m3u8 progressively (updated with each new segment)
-3. Primary generates canonical segments with continuous boundaries
-4. Primary finishes → complete manifest on disk, durations stored in DB
-```
-
-**Seek during first play (uncached position):**
-
-```
-1. User seeks to segment 2700
-2. Primary is still running (e.g. at segment 500) — left alone
-3. Quantum FFmpeg spawned for segment 2700's quantum range
-4. Quantum generates segments with estimated -ss, self-terminates
-5. Player served from quantum segments immediately
-6. Primary eventually reaches segment 2700 — overwrites quantum segments via atomic rename
-7. Primary's segments are now canonical for that range
-```
-
-**Subsequent plays (primary completed, cache evicted):**
-
-```
-1. Full durations stored in DB from primary's completed manifest
-2. Quantum FFmpeg spawned for requested range
-3. -ss computed from stored durations → exact timestamp, no keyframe mismatch
-4. Segments are identical to what the primary originally produced
-```
-
-### Two FFmpeg Processes
-
-```ruby
-@primary_ffmpeg   # one per scene, runs 0 → end, writes manifest.m3u8
-@quantum_ffmpeg   # one per scene, on-demand for seeks, no manifest, self-terminates
-```
-
-The primary and quantum can run concurrently for the same scene without dotfile conflicts — they are always writing different segment numbers (primary is behind, quantum is ahead).
-
-**Primary always wins:** when primary's monitor renames a segment (`rename(".2700.ts", "2700.ts")`), it atomically overwrites any existing quantum-generated segment at that position. This is the desired behaviour — primary segments have correct continuous boundaries.
-
-**Quantum is never killed.** It self-terminates via `-t` after generating its segment range. A 10-segment quantum at remux speed (~10x realtime) finishes in ~2 seconds of wall time. If the user seeks again before the quantum finishes, both the old quantum and the new one can run simultaneously — they cover different segment ranges.
-
-**Quantum must not write a manifest.** The FFmpeg command for quantum uses `-hls_segment_filename` to write segment files but omits `-hls_flags` and manifest output, or writes segments directly without HLS muxer (using `-f segment` instead of `-f hls`). The primary's `manifest.m3u8` is the only manifest file on disk.
-
-### Sequence Diagram
-
-**First play with seek:**
-
-```
-Browser              Controller              StreamManager              Primary FFmpeg    Quantum FFmpeg
-   |                     |                        |                        |
-   |-- GET manifest ---->|                        |                        |
-   |                     |-- start primary ------>|-- spawn at seg 0 ----->|
-   |<-- estimated m3u8 --|                        |                        |-- writes .0.ts, .1.ts...
-   |                     |                        |                        |
-   |-- GET segment 0 --->|                        |                        |
-   |                     |  wait on CV ...        |-- monitor renames ---->|
-   |<-- serve 0.ts ------|                        |                        |
-   |                     |                        |                        |
-   | ... segments 1-15 served from cache ...      |  (primary at seg 20)  |
-   |                     |                        |                        |
-   | (user seeks to 1:30:00 = segment 2700)       |                        |
-   |-- GET segment 2700->|                        |                        |
-   |                     |-- request_segment(2700)|                        |
-   |                     |                        |  not cached, primary at 20
-   |                     |                        |-- spawn quantum -------------------------------->|
-   |                     |  wait on CV ...        |                        |                  (est. -ss)
-   |                     |                        |                        |          writes .2700.ts...
-   |                     |                        |-- monitor renames ---->|                         |
-   |<-- serve 2700.ts ---|                        |                        |                         |
-   |                     |                        |                        |     (self-terminates)    |
-   | ... watching from 2700 ...                   |                        |
-   |                     |                        |  (primary still running, reaches 2700 eventually)
-   |                     |                        |  primary overwrites quantum segments atomically   |
-   |                     |                        |                        |
-   |                     |                        |  (primary finishes)    |
-   |                     |                        |  full manifest.m3u8 on disk
-   |                     |                        |  durations stored in DB
-```
-
-**Later play (cache evicted, durations in DB):**
-
-```
-Browser              Controller              StreamManager              Quantum FFmpeg
-   |                     |                        |                        |
-   |-- GET manifest ---->|                        |                        |
-   |<-- exact m3u8 ------|  (from stored durations)|                       |
-   |                     |                        |                        |
-   |-- GET segment 42 -->|                        |                        |
-   |                     |-- request_segment(42)->|                        |
-   |                     |                        |  not cached, durations known
-   |                     |                        |  -ss = sum(durations 0..39) → exact timestamp
-   |                     |                        |-- spawn quantum ------>|
-   |                     |  wait on CV ...        |                        |-- writes .40.ts...
-   |<-- serve 42.ts -----|                        |                        |
-   |                     |                        |                        | (self-terminates)
-```
-
-### Manifest Serving (Four Tiers)
-
-1. **Complete manifest on disk** (primary finished) — serve directly
-2. **Partial manifest on disk** (primary still running) — serve what exists; segments beyond primary's progress trigger quantum
-3. **Stored durations in DB** (primary finished previously, manifest file deleted) — reconstruct exact manifest from stored values
-4. **No data** (never played) — serve estimated uniform-2s manifest, start primary
-
-### Quantum `-ss` Timestamp Modes
-
-| Mode | When | `-ss` value | Boundary quality |
-|---|---|---|---|
-| Exact | Stored durations exist for all segments before quantum start | Sum of stored durations | Identical to primary — no discontinuity |
-| Estimated | No stored durations (first visit, seek to unknown territory) | `segment_idx * SEGMENT_DURATION` | Approximate — minor keyframe mismatch (remux only) |
-
-For transcode streams (forced keyframes at 2s), both modes produce identical results — the distinction only matters for remux.
-
-### Why Primary Segments Overwrite Quantum
-
-For remux streams, the quantum's estimated `-ss` seeks to the nearest keyframe, which may not align perfectly with where the primary's segments fall. The primary's segments are canonical because they have continuous boundaries from segment 0.
-
-For transcode streams, forced keyframes make all segments identical regardless of start position, so the overwrite is a no-op — same data either way.
-
-### Constants
-
-| Constant | Value | Purpose |
-|---|---|---|
-| `SEGMENT_DURATION` | 2s | Seconds per `.ts` segment |
-| `SEGMENTS_PER_QUANTUM` | 10 | Segments per quantum (20 seconds) |
-| `MAX_IDLE_TIME` | 30s | Kill primary after 30s with no segment requests |
-| `KEEP_FIRST_SEGMENTS` | 15 | Always preserve segments 0–14 in cache |
-| `MAX_CACHE_SIZE` | 5GB | LRU eviction threshold |
-
-### Monitor Loop
-
-```
-For each active stream:
-  ├─ Rename completed dotfiles (.N.ts → N.ts), broadcast ConditionVariable
-  │   └─ Primary overwrites existing quantum segments (atomic rename)
-  ├─ Detect primary natural exit → final rename, store all durations from manifest
-  ├─ Detect quantum natural exit → final rename (no duration storage, no manifest)
-  ├─ Primary idle? (30s no requests) → kill primary
-  └─ (no buffer-full checks, no quantum kills)
-
-After stream checks:
-  └─ LRU eviction: remove segments beyond first 15 from least-recently-used scenes
-     until total tmp/hls/ size is under MAX_CACHE_SIZE
-```
-
-### Quantum Size Tradeoffs
-
-| Quantum | Segments | Max seek wait (copy) | Max seek wait (transcode) |
-|---|---|---|---|
-| 10s / 5 seg | 5 | ~0.8s | ~2-3s |
-| 20s / 10 seg | 10 | ~1.8s | ~4-6s |
-| 30s / 15 seg | 15 | ~2.8s | ~6-10s |
-
-**20s / 10 segments** is the default — worst-case seek is ~1.8s for copy (barely noticeable), and quantum FFmpeg finishes in ~2s wall time for remux.
+Segments are stored in `tmp/hls/{scene_id}/`. When total size exceeds `MAX_CACHE_SIZE`, the monitor evicts least-recently-accessed scenes, preserving segments 0–14 for fast restart. **Scenes with an active primary are never evicted** — this prevents the cache cleaner from deleting early segments while the primary is still running toward the end.
 
 ### Seek Behaviour
 
@@ -642,16 +439,162 @@ After stream checks:
 | Backward seek, uncached | Quantum spawned, primary continues |
 | Forward seek, cached | Instant cache hit |
 | Forward seek, uncached | Quantum spawned, primary continues |
-| Pause | Primary continues running (no kill). Backpressure: nothing requests segments, primary keeps generating to disk |
-| Close tab / idle 30s | Primary killed. Quantums already self-terminated |
-| Continuous playback | Primary stays ahead; if player catches up, quantum fills gap |
+| Sequential playback, segments ahead | Served from disk; prefetch spawns quantum when running low |
+| Pause | Primary continues to completion. No kills. |
+| Close tab / server idle | Primary continues to completion (intentional — captures all durations) |
+| Continuous playback (transcode) | Player may outpace primary; quantum fills gaps via prefetch |
+| Two tabs, same video | One primary; quantums shared via filesystem. Duplicate prevention within worker. |
+
+### Multiple Puma Workers
+
+Each worker has its own `StreamManager` singleton. Coordination happens through the filesystem — if another worker's FFmpeg already generated a segment, the `.ts` file exists and is served immediately. The primary's incremental duration saving uses `update_column` which is atomic per row in SQLite.
 
 ### Edge Cases
 
-- **Last quantum of a video** may be shorter than 20s — FFmpeg hits EOF and exits naturally before `-t` expires. No special handling needed.
-- **FFmpeg error mid-quantum** — monitor detects process exit, does final dotfile rename. If the requested segment wasn't produced, `request_segment` times out and returns `:not_found`. A retry from the player will spawn a fresh quantum.
-- **Multiple seeks in quick succession** — each seek spawns a quantum for its target range. Multiple quantums can run concurrently since they cover non-overlapping segment ranges. Finished quantums self-terminate; their segments get overwritten by primary later.
-- **Cache eviction with partial durations** — if only some segment durations are stored (e.g. primary was killed by idle timeout at segment 500), quantums within the known range use exact timestamps; quantums beyond use estimated timestamps. Next full primary run fills in the remaining durations.
+- **Last quantum of a video** — may be shorter than 20s. FFmpeg hits EOF and exits naturally before `-t` expires.
+- **FFmpeg error mid-quantum** — monitor detects exit, does final dotfile rename. If requested segment wasn't produced, `request_segment` times out (15s) → 404. Player retry spawns a fresh quantum.
+- **Multiple seeks in quick succession** — each spawns a quantum for its target range. Multiple quantums run concurrently for non-overlapping ranges.
+- **Cache eviction with partial durations** — quantums within the known duration range use exact timestamps; those beyond use estimated. Next primary run fills in remaining durations.
+- **Server restart mid-primary** — durations already saved incrementally. Next play resumes primary from last stored segment, or if complete, uses quantum only.
+
+---
+
+## FFmpeg `-f segment` vs `-f hls` — Pitfalls
+
+If you're implementing a similar system, these are the critical differences between the HLS muxer and the segment muxer that will bite you:
+
+### `-f segment` does not split on time by default
+
+The segment muxer only splits on **keyframes**. If your source has keyframes every 6 seconds, you get one 6-second segment instead of three 2-second segments. This is different from `-f hls -hls_flags split_by_time` which forces time-based splits.
+
+**Fix:** Add `-break_non_keyframes 1` to allow splitting at non-keyframe points:
+
+```
+# HLS muxer (primary):
+-f hls -hls_flags split_by_time -hls_time 2
+
+# Segment muxer (quantum) — equivalent:
+-f segment -segment_time 2 -break_non_keyframes 1
+```
+
+Without `-break_non_keyframes 1`, you will get oversized segments and missing segment numbers.
+
+### `-copyts` breaks `-f segment`
+
+With `-copyts`, output timestamps preserve the input seek position (e.g. `-ss 40` produces timestamps starting at 40s). The segment muxer calculates split points from these timestamps, which misaligns with `-segment_time` and `-segment_start_number`. FFmpeg may produce far fewer segments than expected, or exit immediately.
+
+**Fix:** Do not use `-copyts` with `-f segment`. Use `-reset_timestamps 1` instead — each segment gets PTS starting at 0, which is clean for HLS playback (the manifest's `#EXTINF` controls timing, not internal PTS).
+
+```
+# BAD: quantum with -copyts — produces wrong number of segments
+-ss 40 -i input -copyts -f segment -segment_start_number 20 -segment_time 2
+
+# GOOD: quantum with reset_timestamps
+-ss 40 -i input -f segment -segment_start_number 20 -segment_time 2 -reset_timestamps 1
+```
+
+Note: `-copyts` works fine with `-f hls` — the HLS muxer handles timestamp offsets correctly. It's only `-f segment` that breaks.
+
+### `-output_ts_offset` also breaks `-f segment`
+
+Similar to `-copyts`, `-output_ts_offset` shifts all output timestamps which confuses the segment muxer's split-point calculation. A 20-second quantum may produce 1 segment instead of 10.
+
+**Fix:** Don't use `-output_ts_offset` with `-f segment`. If you need continuous timestamps across segments, use `-f hls` (primary) for the canonical run. For quantum, `reset_timestamps` is sufficient — HLS players use manifest timing, not internal PTS.
+
+### 0-byte dotfile race condition
+
+With the dotfile rename pattern (`.N.ts` → `N.ts`), be careful about cleaning up 0-byte files:
+
+```
+1. FFmpeg creates .12.ts (0 bytes — just opened for writing)
+2. Monitor tick runs, sees 0-byte .12.ts, deletes it
+3. FFmpeg writes to the deleted inode (file descriptor still valid)
+4. FFmpeg closes file — data written to deleted inode, lost forever
+5. Segment 12 is permanently missing
+```
+
+**Fix:** Only delete 0-byte dotfiles **after FFmpeg has exited**. While FFmpeg is running, a 0-byte file may be freshly created and about to receive data.
+
+### Monitor must track processes with PID, not just alive processes
+
+The monitor loop must iterate over all processes that have a non-nil PID, not just those confirmed alive. If you filter to `process_alive?` first, a process that exits between monitor ticks will never have its exit detected — its dotfiles will never get the final rename, and its durations will never be saved.
+
+```ruby
+# BAD: misses processes that exited between ticks
+@primary.active_scene_ids.each { |id| @primary.monitor_tick(id) }
+
+# GOOD: includes just-exited processes so exit detection runs
+@primary.scene_ids_with_pid.each { |id| @primary.monitor_tick(id) }
+```
+
+### Quantum segment deduplication
+
+Without guards, the same quantum range can be spawned repeatedly:
+1. Quantum 0-9 runs and exits
+2. Player requests segment in same range
+3. `running_for?` returns false (process exited)
+4. New quantum spawns, overwrites existing segments
+
+For identical ranges this wastes resources. For overlapping ranges from different seek points, it corrupts content (segment N gets content from a different timestamp).
+
+**Fix:** Before spawning, check if the requested segment already exists as a final file on disk:
+```ruby
+return if output_dir.join("#{segment_idx}.ts").exist?
+```
+
+### Audio preroll at quantum seek boundaries
+
+When `-ss` before `-i` seeks to the nearest keyframe, the first segment of each quantum gets **extra audio frames** before the video starts. Audio decodes precisely from the keyframe position, but video can only start from a keyframe — so the segment muxer receives audio preroll that doesn't match the video.
+
+Measured on an AV1 → H.264 transcode (2-second segment target):
+
+| Quantum boundary segment | Audio duration | Video duration | Preroll |
+|--------------------------|---------------|----------------|---------|
+| Segment 0 (no seek)     | 1.9s          | 2.0s           | None    |
+| Segment 10 (ss=20)      | 1.9s          | 2.0s           | ~0s (close keyframe) |
+| Segment 20 (ss=40)      | **4.0s**      | 2.0s           | **~2.0s** |
+| Segment 30 (ss=60)      | **2.7s**      | 2.0s           | **~0.7s** |
+| Segment 50 (ss=100)     | **6.9s**      | 2.0s           | **~4.9s** |
+
+The preroll amount depends on keyframe distance at the seek point — unpredictable and varies per source.
+
+**Fix:** Start each quantum 1 segment earlier than the requested range. The first segment absorbs the seek preroll as a throwaway. The rename filter already excludes segments outside `start_segment..end_segment`, so the preroll segment is never served. The previous quantum's clean segment (or no segment, for the very first quantum starting at 0) is preserved on disk by the `next if dest.exist?` guard.
+
+```ruby
+# Start 1 segment earlier to absorb audio preroll
+ffmpeg_start = [quantum_start - 1, 0].max
+preroll_extra = (quantum_start - ffmpeg_start) * SEGMENT_DURATION
+start_time = compute_start_time(scene, ffmpeg_start)
+
+cmd = FfmpegCommand.quantum(
+  from_segment: ffmpeg_start,       # FFmpeg numbers from here
+  start_time: start_time,           # seek to the earlier position
+  duration: QUANTUM_DURATION + preroll_extra  # slightly longer to compensate
+)
+
+# QuantumStream tracks start_segment = quantum_start (not ffmpeg_start)
+# so rename_dotfiles naturally excludes the preroll segment.
+# On exit, cleanup_preroll_dotfile deletes the orphan.
+```
+
+### Quantum boundary micro-glitches (transcode only)
+
+Even with the preroll fix above, quantum boundaries produce **audible micro-glitches** on transcoded streams (AV1, VP9, etc. being transcoded to H.264). Each quantum is an independent FFmpeg encode — the encoder state (motion estimation history, audio codec state, bitstream buffer) is different at the start of each quantum vs what a continuous encode would produce. Two independent encodes of the same source at the same timestamp produce slightly different bitstreams.
+
+This is not an issue for **remux** streams (`-c:v copy -c:a copy`) where the original bitstream is preserved unchanged.
+
+**Status:** Not fully solved. Approaches tried and their outcomes:
+
+| Approach | Outcome |
+|----------|---------|
+| `-output_ts_offset` to shift quantum timestamps | Broke segment muxer — produced 1 segment instead of 10 |
+| `-copyts` to preserve source timestamps | Broke segment muxer entirely (see above) |
+| `-reset_timestamps 1` per segment | Fixed segment numbering but doesn't help with codec discontinuity |
+| Preroll absorption (start 1 segment early) | Fixes audio preroll, but not encoder state discontinuity |
+
+**Correct solution:** The primary process must run for transcoded streams. Primary runs continuously from segment 0, so all boundaries are natural and seamless. Quantum is a stopgap for immediate playback while primary catches up. If the primary has previously completed but segments were evicted from cache, the primary must re-run (not rely on quantum-only regeneration).
+
+Key insight: stored `hls_segment_durations` alone don't mean the primary is "complete" — the manifest file must also exist on disk. If the cache was evicted (no manifest), re-run the primary from scratch even if durations are stored. The stored durations remain useful for exact quantum `-ss` timestamps while the primary catches up.
 
 ---
 
