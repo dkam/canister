@@ -32,9 +32,14 @@ class ScenesController < ApplicationController
   # PATCH /scenes/:id
   def update
     performer_ids = params[:scene].delete(:performer_ids) if params[:scene]&.key?(:performer_ids)
+    tag_ids = params[:scene].delete(:tag_ids) if params[:scene]&.key?(:tag_ids)
 
-    if @scene.update(scene_update_params)
+    scalar_params = params[:scene]&.keys&.intersect?(%w[title details date rating])
+    updated = scalar_params ? @scene.update(scene_update_params) : true
+
+    if updated
       @scene.performer_ids = performer_ids.map(&:to_s) if performer_ids
+      @scene.tag_ids = tag_ids.map(&:to_s) if tag_ids
       render json: {
         success: true,
         date_display: @scene.date&.strftime("%b %-d, %Y"),

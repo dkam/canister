@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 import TomSelect from "tom-select"
 
-// TomSelect-based multi-select for people/performers.
-// Values: url (PATCH scene endpoint), searchUrl (GET /people/search.json), createUrl (POST /people)
+// TomSelect-based multi-select for tags.
+// Values: url (PATCH scene endpoint), searchUrl (GET /tags/search.json)
 export default class extends Controller {
   static values = { url: String, searchUrl: String, createUrl: String }
 
@@ -45,18 +45,8 @@ export default class extends Controller {
             "X-CSRF-Token": csrfToken,
             "Accept": "application/json"
           },
-          body: JSON.stringify({ scene: { performer_ids: ids } })
-        }).then(r => {
-          if (r.ok) {
-            const frame = document.getElementById("performer-cards")
-            if (frame) frame.src = window.location.href
-          }
+          body: JSON.stringify({ scene: { tag_ids: ids } })
         })
-      },
-      render: {
-        option_create: (data, escape) => {
-          return `<div class="create">Add <strong>${escape(data.input)}</strong>&hellip;</div>`
-        }
       }
     })
   }

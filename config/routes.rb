@@ -48,7 +48,11 @@ Rails.application.routes.draw do
     end
   end
 
-  resources :tags, only: [:index]
+  resources :tags, only: [:index, :create] do
+    collection do
+      get :search
+    end
+  end
 
   resources :galleries, only: [:show] do
     member do

@@ -50,8 +50,8 @@
             <input type="text"
                    data-inline-edit-target="input"
                    data-action="blur->inline-edit#save keydown->inline-edit#keydown"
-                   data-original-value="<%= @scene.title %>"
-                   value="<%= @scene.title %>"
+                   data-original-value="<%= @scene.title.presence || File.basename(@scene.path, ".*") %>"
+                   value="<%= @scene.title.presence || File.basename(@scene.path, ".*") %>"
                    class="w-full text-xl font-bold bg-transparent border border-indigo-400 rounded px-1 py-0.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                    hidden>
           </div>
@@ -84,7 +84,7 @@
           <dd data-inline-edit-target="display"
               data-action="click->inline-edit#edit"
               data-placeholder="—"
-              class="font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+              class="font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 min-h-[1.5em]">
             <%= @scene.date.present? ? @scene.date.strftime("%b %-d, %Y") : "—" %>
           </dd>
           <input type="date"
@@ -136,7 +136,7 @@
         <p data-inline-edit-target="display"
            data-action="click->inline-edit#edit"
            data-placeholder="Click to add details…"
-           class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+           class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 min-h-[1.5em]">
           <%= @scene.details.presence || "Click to add details…" %>
         </p>
         <textarea data-inline-edit-target="input"
@@ -148,17 +148,18 @@
       </div>
 
       <%# Tags %>
-      <% if @scene.tags.any? %>
-        <div class="mb-4">
-          <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Tags</h3>
-          <div class="flex flex-wrap gap-1.5">
-            <% @scene.tags.each do |tag| %>
-              <%= link_to tag.name, scenes_path(tags: [tag.id]),
-                    class: "text-xs bg-gray-100 dark:bg-gray-700 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 hover:text-indigo-700 dark:hover:text-indigo-300 text-gray-600 dark:text-gray-300 px-2 py-1 rounded-full transition-colors" %>
-            <% end %>
-          </div>
-        </div>
-      <% end %>
+      <div class="mb-4"
+           data-controller="tag-select"
+           data-tag-select-url-value="<%= scene_path(@scene) %>"
+           data-tag-select-search-url-value="<%= search_tags_path(format: :json) %>"
+           data-tag-select-create-url-value="<%= tags_path %>">
+        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Tags</h3>
+        <select multiple placeholder="Search tags…">
+          <% @scene.tags.each do |tag| %>
+            <option value="<%= tag.id %>" selected><%= tag.name %></option>
+          <% end %>
+        </select>
+      </div>
 
       <%# Markers %>
       <% if @markers.any? %>
@@ -205,13 +206,15 @@
         </select>
       </div>
 
-      <% if @scene.performers.any? %>
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
-          <% @scene.performers.each do |performer| %>
-            <%= render "shared/person_card", person: performer %>
-          <% end %>
-        </div>
-      <% end %>
+      <turbo-frame id="performer-cards">
+        <% if @scene.performers.any? %>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
+            <% @scene.performers.each do |performer| %>
+              <%= render "shared/person_card", person: performer %>
+            <% end %>
+          </div>
+        <% end %>
+      </turbo-frame>
 
       <%# File path (collapse) %>
       <details class="mt-4">
