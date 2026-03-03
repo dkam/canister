@@ -22,24 +22,6 @@ export default class extends Controller {
       return
     }
 
-    // Clean up any stale video.js player registered under this element's ID
-    // (Turbo snapshots the page before disconnect fires, so dispose() may not fully clean up)
-    const stalePlayer = videoEl.id && window.videojs.getPlayer(videoEl.id)
-    if (stalePlayer) {
-      stalePlayer.dispose()
-      // dispose() removes the element — re-create it
-      const newVideo = document.createElement("video")
-      newVideo.id = videoEl.id
-      newVideo.className = videoEl.className
-      newVideo.setAttribute("controls", "")
-      newVideo.setAttribute("preload", "metadata")
-      this.element.querySelector(".player-overlay")
-        ? this.element.insertBefore(newVideo, this.element.querySelector(".player-overlay"))
-        : this.element.appendChild(newVideo)
-    }
-
-    const activeVideoEl = this.element.querySelector("video")
-
     this._sourceIndex = 0
     const first = this.streamsValue[0]
     if (!first) return
@@ -47,7 +29,7 @@ export default class extends Controller {
     const shouldAutoplay = !!sessionStorage.getItem("canister-autoplay")
     if (shouldAutoplay) sessionStorage.removeItem("canister-autoplay")
 
-    this.player = window.videojs(activeVideoEl, {
+    this.player = window.videojs(videoEl, {
       controls: true,
       autoplay: shouldAutoplay,
       preload: shouldAutoplay ? "auto" : "metadata",
@@ -103,6 +85,10 @@ export default class extends Controller {
     this._boundBeforeVisit = () => { if (this.player) this.player.pause() }
     document.addEventListener("turbo:before-visit", this._boundBeforeVisit)
 
+    // Dispose player before Turbo caches the page — keeps the snapshot clean
+    this._boundBeforeCache = () => this._teardown()
+    document.addEventListener("turbo:before-cache", this._boundBeforeCache)
+
     // Overlay visibility
     this._setupOverlay()
 
@@ -111,10 +97,15 @@ export default class extends Controller {
   }
 
   disconnect() {
-    if (!this.player) return
-
     document.removeEventListener("keydown", this._boundKeydown)
     document.removeEventListener("turbo:before-visit", this._boundBeforeVisit)
+    document.removeEventListener("turbo:before-cache", this._boundBeforeCache)
+    this._teardown()
+  }
+
+  _teardown() {
+    if (!this.player) return
+
     clearInterval(this._saveInterval)
     clearTimeout(this._endedTimeout)
     clearTimeout(this._overlayTimeout)

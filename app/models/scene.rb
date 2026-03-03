@@ -18,6 +18,12 @@ class Scene < ApplicationRecord
   belongs_to :library, optional: true
   belongs_to :studio, optional: true, touch: true
 
+  before_destroy :cleanup_hls_cache
+
+  scoped_search on: [:title, :details, :path]
+  scoped_search relation: :checksums, on: :hash_value
+  scoped_search relation: :scene_markers, on: :title
+
   scope :filter_studios, ->(studio_ids) { where studio_id: studio_ids }
   scope :filter_performers, ->(performer_ids) { joins(:performers).where("performers.id IN (?)", performer_ids).distinct }
 
@@ -91,11 +97,33 @@ class Scene < ApplicationRecord
   end
 
   def stream_file_path
-    File.exist?(transcode_path) ? transcode_path : path
+    File.exist?(transcode_path) ? transcode_path : absolute_path
   end
 
   def media_exists?
-    File.exist?(path)
+    library ? backend.file_exists?(path) : File.exist?(path)
+  end
+
+  def ffmpeg_input
+    return path unless library
+    backend.ffmpeg_input(path)
+  end
+
+  def absolute_path
+    return path unless library
+    backend.absolute_path(path)
+  end
+
+  def backend
+    library&.backend
+  end
+
+  def local?
+    library.nil? || library.local?
+  end
+
+  def remote?
+    library&.remote? || false
   end
 
   def transcode_path
@@ -112,7 +140,7 @@ class Scene < ApplicationRecord
     end
 
     if Rails.cache.read(cache_key).nil?
-      data = Canister::Movie.screenshot(path: path, seconds: seconds, width: width)
+      data = Canister::Movie.screenshot(path: ffmpeg_input, seconds: seconds, width: width)
       Rails.cache.write(cache_key, data)
       data
     else
@@ -137,7 +165,7 @@ class Scene < ApplicationRecord
   end
 
   def checksum
-    checksum_value(type: :opensubtitles) || checksum_value(type: :xxhash)
+    checksum_value(type: :opensubtitles)
   end
 
   def checksum_value(type: :opensubtitles)
@@ -152,5 +180,10 @@ class Scene < ApplicationRecord
 
   def get_vtt_time(seconds)
     Time.at(seconds).gmtime.strftime("%H:%M:%S")
+  end
+
+  def cleanup_hls_cache
+    hls_dir = Rails.root.join("tmp", "hls", id.to_s)
+    FileUtils.rm_rf(hls_dir) if hls_dir.exist?
   end
 end

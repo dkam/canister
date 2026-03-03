@@ -11,7 +11,7 @@ class Canister::Tasks::GenerateTranscode < Canister::Tasks::Base
     FileUtils.mkdir_p(transcode_dir)
 
     @manager.info("Scene #{@scene.id} is of type #{@scene.video_codec}, transcoding...")
-    video = FFMPEG::Movie.new(@scene.path)
+    video = FFMPEG::Movie.new(@scene.ffmpeg_input)
     percent = 0.0
 
     video.transcode(temp_path, %w[-c:v libx264 -profile:v high -level 4.2 -preset superfast -crf 23 -vf scale=iw:-2 -c:a aac]) { |progress|

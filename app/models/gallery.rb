@@ -11,10 +11,10 @@ class Gallery < ApplicationRecord
   end
 
   def checksum
-    checksum_value(type: :xxhash)
+    checksum_value
   end
 
-  def checksum_value(type: :xxhash)
+  def checksum_value(type: :opensubtitles)
     checksums.find_by(checksum_type: type)&.hash_value
   end
 

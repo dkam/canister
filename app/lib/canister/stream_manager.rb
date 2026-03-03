@@ -5,19 +5,19 @@ module Canister
   class StreamManager
     include Singleton
 
-    SEGMENT_DURATION     = 2       # seconds per segment
+    SEGMENT_DURATION = 2       # seconds per segment
     SEGMENT_WAIT_TIMEOUT = 15      # max seconds to wait for segment file
-    MAX_SEGMENT_BUFFER   = 15      # kill FFmpeg when this many segments ahead of last_requested
-    KEEP_FIRST_SEGMENTS  = 15      # always keep first N segments on disk for fast start
-    MAX_SEGMENT_GAP      = 5       # restart if request > this many segments ahead of highest_generated
-    MAX_IDLE_TIME        = 30      # kill after 30s no requests
-    MONITOR_INTERVAL     = 0.2     # background check frequency (seconds)
-    FFMPEG_TERM_WAIT     = 5       # seconds between SIGTERM and SIGKILL
-    MAX_CACHE_SIZE       = (ENV.fetch("HLS_MAX_CACHE_SIZE_GB", "5").to_f * 1024 * 1024 * 1024).to_i
+    MAX_SEGMENT_BUFFER = 15      # kill FFmpeg when this many segments ahead of last_requested
+    KEEP_FIRST_SEGMENTS = 15      # always keep first N segments on disk for fast start
+    MAX_SEGMENT_GAP = 5       # restart if request > this many segments ahead of highest_generated
+    MAX_IDLE_TIME = 30      # kill after 30s no requests
+    MONITOR_INTERVAL = 0.2     # background check frequency (seconds)
+    FFMPEG_TERM_WAIT = 5       # seconds between SIGTERM and SIGKILL
+    MAX_CACHE_SIZE = (ENV.fetch("HLS_MAX_CACHE_SIZE_GB", "5").to_f * 1024 * 1024 * 1024).to_i
 
     RunningStream = Struct.new(
       :scene_id, :pid, :start_segment, :highest_generated,
-      :last_requested, :last_accessed_at, :output_dir, :config, :scene_path,
+      :last_requested, :last_accessed_at, :output_dir, :config, :ffmpeg_input,
       keyword_init: true
     )
 
@@ -50,7 +50,7 @@ module Canister
           last_accessed_at: Time.now,
           output_dir: output_dir,
           config: config,
-          scene_path: scene.path
+          ffmpeg_input: scene.ffmpeg_input
         )
         @streams[scene.id] = stream
         start_ffmpeg(stream, 0)
@@ -83,7 +83,7 @@ module Canister
             last_accessed_at: Time.now,
             output_dir: output_dir,
             config: config,
-            scene_path: scene.path
+            ffmpeg_input: scene.ffmpeg_input
           )
           @streams[scene.id] = stream
           start_ffmpeg(stream, segment_idx)
@@ -201,10 +201,10 @@ module Canister
         cmd += ["-ss", (from_segment * SEGMENT_DURATION).to_s]
       end
 
-      cmd += ["-i", stream.scene_path]
+      cmd += ["-i", stream.ffmpeg_input]
 
       if config[:video_copy]
-        cmd += %w[-c:v copy]
+        cmd += %w[-c:v copy -bsf:v h264_mp4toannexb]
       else
         cmd += %w[-flags +cgop -force_key_frames expr:gte(t,n_forced*2)]
         cmd += %w[-c:v libx264 -preset veryfast -crf 23]
@@ -304,6 +304,22 @@ module Canister
         end
       end
 
+      # After each_cons loop, rename the last dotfile if FFmpeg has exited
+      if stream.pid.nil? && dotfiles.any?
+        last = dotfiles.last
+        n = File.basename(last)[/\.(\d+)\.ts/, 1]&.to_i
+        if n
+          dest = stream.output_dir.join("#{n}.ts")
+          unless dest.exist?
+            begin
+              File.rename(last, dest.to_s)
+              stream.highest_generated = [stream.highest_generated, n].max
+              renamed_any = true
+            rescue Errno::ENOENT; end
+          end
+        end
+      end
+
       renamed_any
     end
 
@@ -334,10 +350,15 @@ module Canister
       manifest_path = stream.output_dir.join("manifest.m3u8")
       return unless manifest_path.exist?
 
+      content = manifest_path.read
+      # Only save when FFmpeg completed successfully — incomplete manifests
+      # (from buffer-full kills, idle timeouts) would permanently cap playback
+      return unless content.include?("#EXT-X-ENDLIST")
+
       return if Scene.where(id: stream.scene_id).where.not(hls_segment_durations: nil).exists?
 
       durations = []
-      File.foreach(manifest_path) do |line|
+      content.each_line do |line|
         if (m = line.match(/#EXTINF:([\d.]+),/))
           durations << m[1].to_f
         end
@@ -401,16 +422,32 @@ module Canister
 
       # Remove non-segment files (manifest, logs) and segments beyond threshold
       remove.each do |f|
-        freed += File.size(f) rescue 0
-        File.delete(f) rescue nil
+        freed += begin
+          File.size(f)
+        rescue
+          0
+        end
+        begin
+          File.delete(f)
+        rescue
+          nil
+        end
       end
 
       # Also remove manifest and log files
       %w[manifest.m3u8 ffmpeg.log].each do |name|
         path = File.join(dir, name)
         if File.exist?(path)
-          freed += File.size(path) rescue 0
-          File.delete(path) rescue nil
+          freed += begin
+            File.size(path)
+          rescue
+            0
+          end
+          begin
+            File.delete(path)
+          rescue
+            nil
+          end
         end
       end
 

@@ -16,7 +16,7 @@ class Canister::Tasks::PrepareVideo < Canister::Tasks::Base
 
   def transcode
     FileUtils.mkdir_p(transcode_dir)
-    movie = FFMPEG::Movie.new(@scene.path)
+    movie = FFMPEG::Movie.new(@scene.ffmpeg_input)
     movie.transcode(temp_path, %w[-c:v libx264 -profile:v high -level 4.2 -preset superfast -crf 23 -vf scale=iw:-2 -c:a aac -movflags +faststart])
     FileUtils.mv(temp_path, transcode_path)
   end

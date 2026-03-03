@@ -14,7 +14,7 @@ class Canister::Tasks::GeneratePreview < Canister::Tasks::Base
     @manager = Canister::Manager.instance
     @manager.info("Generating preview for #{@scene.path}")
 
-    video = FFMPEG::Movie.new(@scene.path)
+    video = FFMPEG::Movie.new(@scene.ffmpeg_input)
 
     Dir.mktmpdir("canister_preview") do |tmpdir|
       chunk_paths = generate_chunks(video, tmpdir)
@@ -39,9 +39,11 @@ class Canister::Tasks::GeneratePreview < Canister::Tasks::Base
 
   def generate_chunks(video, tmpdir)
     step = video.duration / CHUNK_COUNT
+    ffmpeg_input = @scene.ffmpeg_input
     CHUNK_COUNT.times.map do |i|
       chunk_path = File.join(tmpdir, "chunk_#{i.to_s.rjust(3, "0")}.mp4")
-      cmd = "ffmpeg -v quiet -ss #{i * step} -t #{CHUNK_DURATION} -i #{Shellwords.escape(@scene.path)}" \
+      input_arg = @scene.local? ? Shellwords.escape(ffmpeg_input) : "\"#{ffmpeg_input}\""
+      cmd = "ffmpeg -v quiet -ss #{i * step} -t #{CHUNK_DURATION} -i #{input_arg}" \
             " -y -c:v libx264 -profile:v high -level 4.2 -preset medium -crf 21" \
             " -vsync 2 -threads 4 -vf scale=#{WIDTH}:-2 -an" \
             " -movflags +faststart #{Shellwords.escape(chunk_path)}"

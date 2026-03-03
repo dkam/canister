@@ -8,6 +8,6 @@ class CleanJob < ApplicationJob
 
   def perform(*args)
     @manager = Canister::Manager.instance
-    @manager.clean(job_id: provider_job_id, rake: false)
+    @manager.clean(job_id: provider_job_id)
   end
 end

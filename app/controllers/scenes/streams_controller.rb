@@ -5,6 +5,7 @@ class Scenes::StreamsController < ApplicationController
 
   # Byte-range streaming — works for native MP4/WebM and pre-generated transcodes
   def stream
+    return head :not_found if @scene.remote?
     Rails.logger.debug "Range header: #{request.headers["Range"]}"
     send_file @scene.stream_file_path, disposition: "inline"
   end
@@ -70,19 +71,14 @@ class Scenes::StreamsController < ApplicationController
     stream_config = @scene.available_streams.find { |s| s[:kind] == :hls }
     return head :not_found unless stream_config
 
-    tmp_dir         = hls_tmp_dir
+    tmp_dir = hls_tmp_dir
     ffmpeg_manifest = tmp_dir.join("manifest.m3u8")
 
+    Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
+
     manifest = if @scene.hls_segment_durations.present? && stream_config[:video_copy]
-      durations = @scene.hls_segment_durations
-      unless tmp_dir.join("0.ts").exist?
-        Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
-      end
-      build_manifest_from_durations(durations)
-    elsif ffmpeg_manifest.exist?
-      rewrite_ffmpeg_manifest(ffmpeg_manifest)
+      build_manifest_from_durations(@scene.hls_segment_durations)
     else
-      Canister::StreamManager.instance.ensure_ffmpeg_running(@scene, stream_config)
       generate_m3u8
     end
 
@@ -173,7 +169,7 @@ class Scenes::StreamsController < ApplicationController
     cmd = %w[ffmpeg -hide_banner -loglevel error]
 
     cmd += ["-ss", start_time.to_s] if start_time > 0
-    cmd += ["-i", @scene.path]
+    cmd += ["-i", @scene.ffmpeg_input]
 
     # Video codec
     cmd += if config[:video_copy]

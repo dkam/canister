@@ -29,6 +29,7 @@ module Streamable
 
   def direct_streamable?
     return false unless stream_file_exists?
+    return false if remote?
 
     case File.extname(stream_file_path).downcase
     when ".mp4", ".m4v", ".mov"
@@ -43,7 +44,11 @@ module Streamable
   end
 
   def stream_file_exists?
-    File.exist?(transcode_path) || File.exist?(path)
+    if library
+      backend.file_exists?(path)
+    else
+      File.exist?(transcode_path) || File.exist?(path)
+    end
   end
 
   def build_hls_stream
