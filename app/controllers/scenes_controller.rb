@@ -5,6 +5,7 @@ class ScenesController < ApplicationController
   def index
     @scenes = Scene.filter(scene_filter_params) if scene_filter_params.any?
     @scenes ||= Scene.all
+    @scenes = @scenes.full_search(params[:q]) if params[:q].present?
     @scenes = @scenes.includes(:studio, :performers).order(created_at: :desc)
 
     if params[:sort].present?
@@ -99,9 +100,9 @@ class ScenesController < ApplicationController
   end
 
   def scene_filter_params
-    params.permit(:rating, :resolution, :studio_id, :has_markers,
+    params.permit(:rating, :resolution, :studio_id, :has_markers, :q, :sort, :direction,
       tags: [], filter_performers: [])
       .to_h
-      .reject { |_, v| v.blank? }
+      .reject { |k, v| %w[q sort direction].include?(k) || v.blank? }
   end
 end

@@ -1,7 +1,10 @@
 class Scene < ApplicationRecord
   include Filterable
+  include SqliteSearch
   include Streamable
   include Taggable
+
+  search_scope :title, :details, :path
 
   validates :path, presence: true, uniqueness: true
   validates :checksums, presence: true
@@ -14,10 +17,6 @@ class Scene < ApplicationRecord
   has_one_attached :preview_clip
   belongs_to :library, optional: true
   belongs_to :studio, optional: true, touch: true
-
-  scoped_search on: [:title, :details, :path]
-  scoped_search relation: :checksums, on: :hash_value
-  scoped_search relation: :scene_markers, on: :title
 
   scope :filter_studios, ->(studio_ids) { where studio_id: studio_ids }
   scope :filter_performers, ->(performer_ids) { joins(:performers).where("performers.id IN (?)", performer_ids).distinct }

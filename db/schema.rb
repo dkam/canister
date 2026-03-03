@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_01_173955) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_02_214458) do
   create_table "active_storage_attachments", id: :uuid, force: :cascade do |t|
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
@@ -73,9 +73,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173955) do
     t.string "default_video_kind", default: "video", null: false
     t.string "kind", default: "local", null: false
     t.string "name", null: false
+    t.string "password"
     t.string "path", null: false
     t.boolean "read_only", default: false, null: false
     t.datetime "updated_at", null: false
+    t.string "username"
   end
 
   create_table "performers", id: :uuid, force: :cascade do |t|
@@ -205,4 +207,8 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_01_173955) do
   add_foreign_key "scraped_items", "studios"
   add_foreign_key "screenshots", "scenes"
   add_foreign_key "taggings", "tags"
+
+  # Virtual tables defined in this database.
+  # Note that virtual tables may not work with other database engines. Be careful if changing database.
+  create_virtual_table "fts_scenes", "fts5", ["title", "details", "path", "scene_id UNINDEXED"]
 end
