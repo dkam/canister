@@ -4,7 +4,7 @@ Rails app for the Canister media organizer. Serves an HTML frontend using Turbo/
 
 ## Stack
 
-- **Ruby**: 3.4.7
+- **Ruby**: 4.0.1
 - **Rails**: 8.1.2
 - **Database**: SQLite3 (`db/development.sqlite3`, `db/test.sqlite3`)
 - **Frontend**: Turbo, Stimulus, Tailwind CSS, Propshaft, Importmap
@@ -70,14 +70,9 @@ Solid stack **complete** — Solid Cache, Solid Queue, Solid Cable in use (no Re
 UUIDv7 **complete** — all primary key `id` columns use UUIDv7. Stored as 16-byte binary (`blob(16)` in SQLite), exposed as 25-char base36 strings (e.g. `"01jcqzx8h0000000000000000"`). Custom type registered in `lib/rails_ext/active_record_uuid_type.rb`; generation via `SecureRandom.uuid_v7`. No `primary_key` declarations needed in models.
 HLS streaming **basic working** — HLS playback is functional.
 
-### Next steps
-
-- Upgrade Ruby 3.4.7 → 4.0.1
-
 ### Known issues
 
 - `rubyzip` uses pre-v3 API — update when convenient
-- `params[:format] == :jpg` in `scenes_controller.rb:49` is a bug (string vs symbol comparison)
 
 ## Roadmap
 
@@ -93,9 +88,9 @@ Supported sources (read-only or read-write):
 - **HTTP directory** — static file server / Apache/Nginx directory listings
 - **WebDAV** — read-write capable
 - **S3** — object storage
-- **Jellyfin** — media server integration (tbd)
-- **Plex** — media server integration (tbd)
-- **DLNA** — media server protocol (tbd)
+- **Jellyfin** — media server integration (planned)
+- **Plex** — media server integration (planned)
+- **DLNA** — future/maybe
 
 ### Collections (Organisational Structure)
 
@@ -156,7 +151,27 @@ Rules:
 - ActiveStorage used for both generated clips and uploaded files — no distinction needed
 - Bookmarks/snippets inherit people and collection membership from their parent — no need to duplicate associations
 
+### Jellyfin API Compatibility
+
+Implement enough of the Jellyfin REST API that existing Jellyfin clients (Infuse, mobile apps, Android TV, Roku) can connect to Canister as if it were a Jellyfin server. Core endpoints: auth, library browsing, item details, images, playback info, search, watch status. This is the primary strategy for device support — replaces DLNA.
+
+### MCP Endpoint
+
+Expose an MCP endpoint (`/mcp`) using Streamable HTTP transport so LLMs (Claude Code, Claude Desktop, etc.) can manage the library — renaming, tagging, categorising media. Bearer token auth, JSON-RPC protocol.
+
+### Bonjour / mDNS Discovery
+
+Zero-config discovery of the Canister server on the local network using `dnssd` gem and Avahi in Docker. Enables automatic server discovery by tvOS app and other clients.
+
+### tvOS App
+
+Native Apple TV app using TVML/TVMLKit — lightweight Swift shell with server-hosted JS/TVML templates. Paid app to support the open source project.
+
 ### Not Adding
 
 - **yt-dlp** — media download functionality
 - **Bittorrent** — torrent download functionality
+
+### Detailed Notes
+
+See `docs/goals.md` for detailed architecture notes and implementation plans (private, not committed).
