@@ -1,13 +1,10 @@
 class ExportService
   def initialize
-    @manager = MediaManager.instance
   end
 
   def start
     create_folders
     @mappings = {people: [], studios: [], galleries: [], videos: []}
-
-    @manager.total = Video.count + Gallery.count + Person.count + Studio.count
 
     export_videos
     export_galleries
@@ -15,8 +12,6 @@ class ExportService
     export_studios
 
     JsonUtility.save_mappings(json: @mappings)
-
-    export_scraped
 
     nil
   end
@@ -32,7 +27,6 @@ class ExportService
 
   def export_videos
     Video.all.each do |video|
-      @manager.current += 1
       @mappings[:videos].push(id: video.id, path: video.path)
 
       json = {}
@@ -86,7 +80,6 @@ class ExportService
   def export_people
     clean_people
     Person.all.each do |person|
-      @manager.current += 1
       @mappings[:people].push(id: person.id, name: person.name)
 
       json = {}
@@ -121,7 +114,6 @@ class ExportService
 
   def export_studios
     Studio.all.each do |studio|
-      @manager.current += 1
       @mappings[:studios].push(id: studio.id, name: studio.name)
 
       json = {}
@@ -142,7 +134,6 @@ class ExportService
 
   def export_galleries
     Gallery.all.each do |gallery|
-      @manager.current += 1
       @mappings[:galleries].push(id: gallery.id, path: gallery.path)
 
       json = {}
@@ -158,31 +149,6 @@ class ExportService
 
       JsonUtility.save_gallery(id: gallery.id, json: json)
     end
-  end
-
-  def export_scraped
-    results = []
-    ScrapedItem.all.each do |scraped_item|
-      json = {}
-
-      json[:title] = scraped_item.title unless scraped_item.title.blank?
-      json[:description] = scraped_item.description unless scraped_item.description.blank?
-      json[:url] = scraped_item.url unless scraped_item.url.blank?
-      json[:date] = scraped_item.date unless scraped_item.date.blank?
-      json[:rating] = scraped_item.rating unless scraped_item.rating.blank?
-      json[:tags] = scraped_item.tags unless scraped_item.tags.blank?
-      json[:models] = scraped_item.models unless scraped_item.models.blank?
-      json[:episode] = scraped_item.episode unless scraped_item.episode.blank?
-      json[:gallery_filename] = scraped_item.gallery_filename unless scraped_item.gallery_filename.blank?
-      json[:gallery_url] = scraped_item.gallery_url unless scraped_item.gallery_url.blank?
-      json[:video_filename] = scraped_item.video_filename unless scraped_item.video_filename.blank?
-      json[:video_url] = scraped_item.video_url unless scraped_item.video_url.blank?
-      json[:studio] = scraped_item.studio.name
-      json[:updated_at] = scraped_item.updated_at
-
-      results.push(json)
-    end
-    JsonUtility.save_scraped(json: results)
   end
 
   def get_names(objects)
@@ -201,7 +167,7 @@ class ExportService
       id = File.basename(path, ".json")
       next if Person.find_by(id: id)
 
-      @manager.info("Person cleanup removing #{id}")
+      Rails.logger.info("Person cleanup removing #{id}")
       File.delete(File.join(Canister::STASH_PEOPLE_DIRECTORY, "#{id}.json"))
     end
   end

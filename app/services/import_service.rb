@@ -1,6 +1,5 @@
 class ImportService
   def initialize
-    @manager = MediaManager.instance
   end
 
   def start
@@ -12,48 +11,12 @@ class ImportService
     import_galleries
     import_tags
 
-    ScrapedItem.transaction {
-      import_scraped_sites
-    }
-
     Video.transaction {
       import_videos
     }
   end
 
   private
-
-  def import_scraped_sites
-    scraped = JsonUtility.scraped
-    return unless scraped
-
-    scraped.each.with_index(1) { |json, index|
-      @manager.info("Reading scraped site #{index} of #{scraped.count}\r")
-
-      scraped_item = ScrapedItem.new
-
-      scraped_item.title = json["title"]
-      scraped_item.description = json["description"]
-      scraped_item.url = json["url"]
-      scraped_item.date = json["date"]
-      scraped_item.rating = json["rating"]
-      scraped_item.tags = json["tags"]
-      scraped_item.models = json["models"]
-      scraped_item.episode = json["episode"]
-      scraped_item.gallery_filename = json["gallery_filename"]
-      scraped_item.gallery_url = json["gallery_url"]
-      scraped_item.video_filename = json["video_filename"]
-      scraped_item.video_url = json["video_url"]
-
-      studio = get_studio(json["studio"])
-      scraped_item.studio = studio if studio
-
-      scraped_item.save!
-      scraped_item.touch(:updated_at, time: Time.parse(json["updated_at"]))
-    }
-
-    @manager.info("Scraped site import complete")
-  end
 
   def import_people
     people = []
@@ -65,7 +28,7 @@ class ImportService
       json = JsonUtility.person id
       next unless id && name && json
 
-      @manager.info("Reading person #{index} of #{@mappings["people"].count}\r")
+      Rails.logger.info("Reading person #{index} of #{@mappings["people"].count}\r")
 
       person = Person.new(id: id)
       person.name = name
@@ -89,10 +52,10 @@ class ImportService
       people.push(person)
     }
 
-    @manager.info("Importing people...")
+    Rails.logger.info("Importing people...")
     Person.import(people, validate: false)
 
-    @manager.info("Attaching person images...")
+    Rails.logger.info("Attaching person images...")
     images.each do |id, base64_data|
       person = Person.find_by(id: id)
       next unless person
@@ -108,7 +71,7 @@ class ImportService
       )
     end
 
-    @manager.info("Person import complete")
+    Rails.logger.info("Person import complete")
   end
 
   def import_studios
@@ -123,7 +86,7 @@ class ImportService
       json = JsonUtility.studio id
       next unless id && name && json
 
-      @manager.info("Reading studio #{index} of #{@mappings["studios"].count}\r")
+      Rails.logger.info("Reading studio #{index} of #{@mappings["studios"].count}\r")
 
       studio = Studio.new(id: id)
       studio.name = name
@@ -133,10 +96,10 @@ class ImportService
       studios.push(studio)
     }
 
-    @manager.info("Importing studios...")
+    Rails.logger.info("Importing studios...")
     Studio.import(studios, validate: false)
 
-    @manager.info("Attaching studio images...")
+    Rails.logger.info("Attaching studio images...")
     images.each do |id, base64_data|
       studio = Studio.find_by(id: id)
       next unless studio
@@ -152,7 +115,7 @@ class ImportService
       )
     end
 
-    @manager.info("Studio import complete")
+    Rails.logger.info("Studio import complete")
   end
 
   def import_galleries
@@ -162,7 +125,7 @@ class ImportService
       path = galleryJSON["path"]
       next unless id && path
 
-      @manager.info("Reading gallery #{index} of #{@mappings["galleries"].count}\r")
+      Rails.logger.info("Reading gallery #{index} of #{@mappings["galleries"].count}\r")
 
       gallery = Gallery.new(id: id)
       gallery.path = path
@@ -180,9 +143,9 @@ class ImportService
       galleries.push(gallery)
     }
 
-    @manager.info("Importing galleries...")
+    Rails.logger.info("Importing galleries...")
     Gallery.import(galleries)
-    @manager.info("Gallery import complete")
+    Rails.logger.info("Gallery import complete")
   end
 
   def import_tags
@@ -193,11 +156,11 @@ class ImportService
       id = videoJSON["id"]
       path = videoJSON["path"]
       unless id && path
-        @manager.warn("Video mapping without id and path! #{videoJSON}")
+        Rails.logger.warn("Video mapping without id and path! #{videoJSON}")
         next
       end
 
-      @manager.info("Importing tags for video #{index} of #{@mappings["videos"].count}\r")
+      Rails.logger.info("Importing tags for video #{index} of #{@mappings["videos"].count}\r")
 
       json = JsonUtility.video id
       if json
@@ -230,9 +193,9 @@ class ImportService
       tags.push(tag)
     }
 
-    @manager.info("Importing tags...")
+    Rails.logger.info("Importing tags...")
     Tag.import(tags)
-    @manager.info("Tag import complete")
+    Rails.logger.info("Tag import complete")
   end
 
   def import_videos
@@ -240,11 +203,11 @@ class ImportService
       id = videoJSON["id"]
       path = videoJSON["path"]
       unless id && path
-        @manager.warn("Video mapping without id and path! #{videoJSON}")
+        Rails.logger.warn("Video mapping without id and path! #{videoJSON}")
         next
       end
 
-      @manager.info("Importing video #{index} of #{@mappings["videos"].count}\r")
+      Rails.logger.info("Importing video #{index} of #{@mappings["videos"].count}\r")
 
       video = Video.find_by(id: id)
       video ||= Video.new(id: id)
@@ -267,7 +230,7 @@ class ImportService
           if gallery
             video.gallery = gallery
           else
-            @manager.warn("Gallery does not exist! #{gallery_id}")
+            Rails.logger.warn("Gallery does not exist! #{gallery_id}")
           end
         end
 
@@ -294,7 +257,7 @@ class ImportService
             if primary_tag
               new_marker.primary_tag = primary_tag
             else
-              @manager.warn("Primary tag does not exist! #{marker["primary_tag"]}")
+              Rails.logger.warn("Primary tag does not exist! #{marker["primary_tag"]}")
             end
 
             marker_tags = get_tags(marker["tags"])
@@ -337,7 +300,7 @@ class ImportService
       video.save!(validate: false)
     }
 
-    @manager.info("Video import complete")
+    Rails.logger.info("Video import complete")
   end
 
   def get_studio(studio_name)
@@ -347,7 +310,7 @@ class ImportService
     if studio
       studio
     else
-      @manager.warn("Studio does not exist! #{studio_name}.")
+      Rails.logger.warn("Studio does not exist! #{studio_name}.")
       nil
     end
   end
@@ -359,7 +322,7 @@ class ImportService
 
     missing_tags = tag_names - tags.pluck(:name)
     missing_tags.each { |tag_name|
-      @manager.warn("Tag does not exist! #{tag_name}")
+      Rails.logger.warn("Tag does not exist! #{tag_name}")
     }
 
     tags
@@ -372,7 +335,7 @@ class ImportService
 
     missing_people = person_names - people.pluck(:name)
     missing_people.each { |person_name|
-      @manager.warn("Person does not exist! #{person_name}")
+      Rails.logger.warn("Person does not exist! #{person_name}")
     }
 
     people

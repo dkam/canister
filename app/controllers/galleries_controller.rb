@@ -10,9 +10,9 @@ class GalleriesController < ApplicationController
 
       file_path = nil
       if params[:thumb]
-        file_path = Canister::ZipUtility.get_thumbnail(gallery: @gallery, index: index)
+        file_path = ZipUtility.get_thumbnail(gallery: @gallery, index: index)
       else
-        file_path = Canister::ZipUtility.get_image(gallery: @gallery, index: index)
+        file_path = ZipUtility.get_image(gallery: @gallery, index: index)
       end
 
       raise ActionController::RoutingError.new('Not Found') unless file_path

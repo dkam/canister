@@ -78,6 +78,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_05_073521) do
     t.boolean "read_only", default: false, null: false
     t.datetime "updated_at", null: false
     t.string "username"
+    t.index ["path"], name: "index_libraries_on_path", unique: true
   end
 
   create_table "people", id: :uuid, force: :cascade do |t|

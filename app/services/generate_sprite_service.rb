@@ -1,6 +1,5 @@
 class GenerateSpriteService
   def initialize(video:)
-    @manager = MediaManager.instance
     @video = video
   end
 

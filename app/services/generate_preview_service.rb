@@ -4,14 +4,13 @@ class GeneratePreviewService
   WIDTH = 640
 
   def initialize(video:)
-    @manager = MediaManager.instance
     @video = video
   end
 
   def start
     return if @video.preview_clip.attached?
 
-    @manager.info("Generating preview for #{@video.path}")
+    Rails.logger.info("Generating preview for #{@video.path}")
 
     movie = FFMPEG::Movie.new(@video.ffmpeg_input)
 
@@ -28,7 +27,7 @@ class GeneratePreviewService
         content_type: "video/mp4"
       )
 
-      @manager.info("Created preview for #{@video.path}")
+      Rails.logger.info("Created preview for #{@video.path}")
     end
 
     @video

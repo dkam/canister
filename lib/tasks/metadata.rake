@@ -1,12 +1,12 @@
 namespace :metadata do
   desc "Import JSON metadata"
   task import: ["db:drop", "db:create", "db:migrate"] do
-    MediaManager.instance.import(job_id: "rake")
+    ImportService.new.start
   end
 
   desc "Export JSON metadata."
   task export: :environment do
-    MediaManager.instance.export(job_id: "rake")
+    ExportService.new.start
   end
 
   desc "Scan the stash directory for new files"
@@ -30,6 +30,6 @@ namespace :metadata do
 
   desc "Cleanup generated files for missing videos"
   task cleanup: :environment do
-    MediaManager.instance.clean(job_id: "rake")
+    CleanService.new.start
   end
 end

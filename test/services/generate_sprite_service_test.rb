@@ -5,7 +5,6 @@ class GenerateSpriteServiceTest < ActiveSupport::TestCase
     video = videos(:video)
     service = GenerateSpriteService.new(video: video)
     assert_instance_of GenerateSpriteService, service
-    assert_instance_of MediaManager, service.instance_variable_get(:@manager)
   end
 
   test "start is a no-op" do

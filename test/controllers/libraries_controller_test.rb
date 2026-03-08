@@ -3,7 +3,6 @@ require "test_helper"
 class LibrariesControllerTest < ActionDispatch::IntegrationTest
   setup do
     @library = Library.create!(name: "Test Library", path: "/videos", kind: "local")
-    MediaManager.instance.send(:idle)
   end
 
   test "GET index" do

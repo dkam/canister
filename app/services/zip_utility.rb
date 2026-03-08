@@ -1,5 +1,4 @@
-module Canister::ZipUtility
-
+module ZipUtility
   def self.get_image(gallery:, index:)
     extract(gallery)
     file = gallery.files[index]

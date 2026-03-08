@@ -1,13 +1,7 @@
 class ImportJob < ApplicationJob
   queue_as :default
 
-  before_enqueue do |job|
-    @manager = MediaManager.instance
-    raise('Operation already in progress') unless @manager.status == :idle
-  end
-
   def perform(*args)
-    @manager = MediaManager.instance
-    @manager.import(job_id: provider_job_id, rake: false)
+    ImportService.new.start
   end
 end

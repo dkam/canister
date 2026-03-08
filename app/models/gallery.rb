@@ -26,6 +26,6 @@ class Gallery < ApplicationRecord
   scope :unowned_in_path, ->(path) { unowned.where("path like ?", "%#{path}%") }
 
   def files
-    Canister::ZipUtility.get_files(path)
+    ZipUtility.get_files(path)
   end
 end

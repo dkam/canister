@@ -133,21 +133,7 @@ class Video < ApplicationRecord
   end
 
   def screenshot(seconds: nil, width: nil)
-    cache_key = "video_#{id}"
-    if seconds
-      cache_key += "_#{seconds}"
-    end
-    if width
-      cache_key += "_#{width}"
-    end
-
-    if Rails.cache.read(cache_key).nil?
-      data = Canister::Movie.screenshot(path: ffmpeg_input, seconds: seconds, width: width)
-      Rails.cache.write(cache_key, data)
-      data
-    else
-      Rails.cache.read(cache_key)
-    end
+    ScreenshotService.generate_bytes(path: ffmpeg_input, seconds: seconds, width: width)
   end
 
   def chapter_vtt

@@ -1,6 +1,8 @@
 FFMPEG.logger.level = Logger::WARN
 
 module Canister
+  VERSION = "0.1.0"
+
   TRANSCODE_DIRECTORY = ENV.fetch("TRANSCODE_PATH", Rails.root.join("transcodes").to_s)
   VALID_HTML5_CODECS = ["h264", "h265", "hevc", "vp8", "vp9", "av1"].freeze
   STREAMABLE_EXTENSIONS = %w[.mp4 .m4v .mov .webm].freeze
@@ -13,7 +15,6 @@ module Canister
   STASH_STUDIOS_DIRECTORY = File.join(STASH_METADATA_DIRECTORY, "studios")
   STASH_CACHE_DIRECTORY = File.join(STASH_METADATA_DIRECTORY, "cache")
   STASH_MAPPINGS_FILE = File.join(STASH_METADATA_DIRECTORY, "mappings.json")
-  STASH_SCRAPED_FILE = File.join(STASH_METADATA_DIRECTORY, "scraped.json")
 
   # Generated content directories
   STASH_SCREENSHOTS_DIRECTORY = File.join(STASH_METADATA_DIRECTORY, "screenshots")

@@ -1,6 +1,5 @@
 class CleanService
   def initialize
-    @manager = MediaManager.instance
   end
 
   def start
@@ -14,12 +13,12 @@ class CleanService
   private
 
   def clean_directory(dir)
-    @manager.info("Cleaning #{dir}")
+    Rails.logger.info("Cleaning #{dir}")
 
     Dir.foreach(dir) { |f|
       if /([a-z0-9]{25})/ =~ f
         unless Video.exists?(id: $1)
-          @manager.info("Video #{$1} no longer exists")
+          Rails.logger.info("Video #{$1} no longer exists")
           FileUtils.rm_r [File.join(dir, f)]
         end
       end
@@ -27,11 +26,11 @@ class CleanService
   end
 
   def remove_deleted
-    @manager.info("Removing metadata for deleted media")
+    Rails.logger.info("Removing metadata for deleted media")
 
     Video.all.each do |video|
       unless video.media_exists?
-        @manager.info("Video #{video.path} no longer exists.")
+        Rails.logger.info("Video #{video.path} no longer exists.")
         video.destroy
       end
     end

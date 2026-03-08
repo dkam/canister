@@ -1,8 +1,8 @@
 require "test_helper"
 
 class ExportServiceTest < ActiveSupport::TestCase
-  test "initializes with MediaManager" do
+  test "initializes" do
     service = ExportService.new
-    assert_instance_of MediaManager, service.instance_variable_get(:@manager)
+    assert_instance_of ExportService, service
   end
 end

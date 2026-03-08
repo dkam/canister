@@ -9,9 +9,4 @@ class ScanServiceTest < ActiveSupport::TestCase
     service = ScanService.new(path: "test.mp4", library: @library)
     assert_instance_of ScanService, service
   end
-
-  test "uses MediaManager singleton" do
-    service = ScanService.new(path: "test.mp4", library: @library)
-    assert_instance_of MediaManager, service.instance_variable_get(:@manager)
-  end
 end

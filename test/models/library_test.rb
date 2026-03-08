@@ -62,7 +62,6 @@ class LibraryTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "scan enqueues ScanJob with library id" do
-    MediaManager.instance.send(:idle)
     library = Library.create!(name: "Test", path: "/videos", kind: "local")
 
     assert_enqueued_with(job: ScanJob, args: [library.id]) do

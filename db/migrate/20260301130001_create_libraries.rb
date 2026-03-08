@@ -9,5 +9,7 @@ class CreateLibraries < ActiveRecord::Migration[8.1]
 
       t.timestamps
     end
+
+    add_index :libraries, :path, unique: true
   end
 end

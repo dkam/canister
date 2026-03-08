@@ -1,6 +1,5 @@
 class TranscodeService
   def initialize(video:)
-    @manager = MediaManager.instance
     @video = video
   end
 
@@ -10,14 +9,14 @@ class TranscodeService
 
     FileUtils.mkdir_p(transcode_dir)
 
-    @manager.info("Video #{@video.id} is of type #{@video.video_codec}, transcoding...")
+    Rails.logger.info("Video #{@video.id} is of type #{@video.video_codec}, transcoding...")
     movie = FFMPEG::Movie.new(@video.ffmpeg_input)
     percent = 0.0
 
     movie.transcode(temp_path, %w[-c:v libx264 -profile:v high -level 4.2 -preset superfast -crf 23 -vf scale=iw:-2 -c:a aac -movflags +faststart]) { |progress|
       rounded = progress.round(2)
       if rounded > percent
-        @manager.info("Progress: #{rounded}")
+        Rails.logger.info("Progress: #{rounded}")
         percent = rounded
       end
     }

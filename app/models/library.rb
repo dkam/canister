@@ -8,7 +8,7 @@ class Library < ApplicationRecord
   enum :default_video_kind, {video: "video", music_video: "music_video"}
 
   validates :name, presence: true
-  validates :path, presence: true
+  validates :path, presence: true, uniqueness: true
 
   def backend
     @backend ||= case kind
