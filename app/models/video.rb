@@ -11,12 +11,14 @@ class Video < ApplicationRecord
   validates :path, presence: true, uniqueness: true
   validates :checksums, presence: true
 
+  has_one_attached :preview_clip
+
+
   has_and_belongs_to_many :people
   has_many :checksums, as: :hashable, dependent: :destroy
   has_one :gallery, as: :ownable, dependent: :nullify
   has_many :video_markers, -> { order(seconds: :asc) }, dependent: :destroy
   has_many :screenshots, dependent: :destroy
-  has_one_attached :preview_clip
   belongs_to :library, optional: true, touch: true
   belongs_to :studio, optional: true, touch: true
 
