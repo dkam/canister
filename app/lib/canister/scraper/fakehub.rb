@@ -95,10 +95,10 @@ class Canister::Scraper::Fakehub < Canister::Scraper::SeleniumScraper
   def download
     authenticate
     scraped_items.each { |item|
-      next unless item.scene.nil?
+      next unless item.video.nil?
       @driver.get(item.url)
       item.update(file_info(item))
-      download_scene(item)
+      download_video(item)
     }
   end
 

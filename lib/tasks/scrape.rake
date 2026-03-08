@@ -80,6 +80,6 @@ namespace :scrape do
     args.with_defaults(action: 'scrape', page: 1, name: default_studio_name)
     studio = scrape_task_get_studio(args)
     scraper = scraper_klass.new(studio: studio, page: args[:page].to_i, action: args[:action])
-    Canister::Manager.instance.scrape(job_id: 'rake', scraper: scraper)
+    MediaManager.instance.scrape(job_id: 'rake', scraper: scraper)
   end
 end

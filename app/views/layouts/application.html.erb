@@ -6,6 +6,8 @@
     <title><%= content_for?(:title) ? yield(:title) + " — Canister" : "Canister" %></title>
     <%= csrf_meta_tags %>
     <%= csp_meta_tag %>
+    <meta name="turbo-refresh-method" content="morph">
+    <meta name="turbo-refresh-scroll" content="preserve">
     <%= stylesheet_link_tag "tailwind", "data-turbo-track": "reload" %>
     <link href="https://cdn.jsdelivr.net/npm/video.js@8.21.0/dist/video-js.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.css" rel="stylesheet">
@@ -15,12 +17,12 @@
   <body class="bg-white dark:bg-gray-900 min-h-screen flex flex-col text-gray-900 dark:text-gray-100 antialiased">
 
     <%# Top navigation %>
-    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40" data-controller="nav-scenes">
+    <nav class="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 sticky top-0 z-40" data-controller="nav-videos">
       <div class="max-w-screen-2xl mx-auto px-4 sm:px-6">
         <div class="flex items-center justify-between h-16">
           <div class="flex items-center gap-6">
             <%= link_to "Canister", root_path, class: "text-xl font-bold text-gray-900 dark:text-gray-100 mr-2" %>
-            <%= link_to "Scenes", scenes_path, class: nav_link_class("scenes"), data: { nav_scenes_target: "link" } %>
+            <%= link_to "Videos", videos_path, class: nav_link_class("videos"), data: { nav_videos_target: "link" } %>
             <%= link_to "People", people_path, class: nav_link_class("people") %>
             <%= link_to "Studios", studios_path, class: nav_link_class("studios") %>
             <%= link_to "Tags", tags_path, class: nav_link_class("tags") %>

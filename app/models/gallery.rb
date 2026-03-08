@@ -1,5 +1,5 @@
 class Gallery < ApplicationRecord
-  has_and_belongs_to_many :performers
+  has_and_belongs_to_many :people
   has_many :checksums, as: :hashable, dependent: :destroy
   validates :checksums, presence: true
   belongs_to :ownable, polymorphic: true, optional: true

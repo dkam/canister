@@ -1,8 +1,8 @@
 module Hls
   class TranscodeProcess
     TranscodeStream = Struct.new(
-      :scene_id, :pid, :start_segment, :highest_generated,
-      :output_dir, :config, :ffmpeg_input, :scene_duration,
+      :video_id, :pid, :start_segment, :highest_generated,
+      :output_dir, :config, :ffmpeg_input, :video_duration,
       :last_access, :last_requested_segment,
       keyword_init: true
     )
@@ -13,22 +13,22 @@ module Hls
       @stream = nil
     end
 
-    def start(scene, config, from_segment, cache)
+    def start(video, config, from_segment, cache)
       stop if @stream&.pid
 
-      output_dir = cache.ensure_dir(scene.id)
+      output_dir = cache.ensure_dir(video.id)
 
       # Clean old segments and manifests when restarting
       cleanup_segments(output_dir) if from_segment > 0
 
       cmd = FfmpegCommand.build(
-        input: scene.ffmpeg_input,
+        input: video.ffmpeg_input,
         output_dir: output_dir,
         config: config,
         from_segment: from_segment
       )
 
-      Rails.logger.info "HLS Transcode: starting for scene #{scene.id} from segment #{from_segment}"
+      Rails.logger.info "HLS Transcode: starting for video #{video.id} from segment #{from_segment}"
       Rails.logger.info "HLS Transcode: #{cmd.join(" ")}"
 
       log_path = output_dir.join("ffmpeg.log")
@@ -36,14 +36,14 @@ module Hls
       Process.detach(pid)
 
       @stream = TranscodeStream.new(
-        scene_id: scene.id,
+        video_id: video.id,
         pid: pid,
         start_segment: from_segment,
         highest_generated: from_segment - 1,
         output_dir: output_dir,
         config: config,
-        ffmpeg_input: scene.ffmpeg_input,
-        scene_duration: scene.duration.to_f,
+        ffmpeg_input: video.ffmpeg_input,
+        video_duration: video.duration.to_f,
         last_access: Time.now,
         last_requested_segment: from_segment
       )
@@ -59,8 +59,8 @@ module Hls
       @stream&.pid && process_alive?(@stream.pid)
     end
 
-    def scene_id
-      @stream&.scene_id
+    def video_id
+      @stream&.video_id
     end
 
     def highest_generated
@@ -90,7 +90,7 @@ module Hls
       renamed_any = rename_dotfiles
 
       unless process_alive?(@stream.pid)
-        Rails.logger.info "HLS Transcode: FFmpeg exited for scene #{@stream.scene_id}"
+        Rails.logger.info "HLS Transcode: FFmpeg exited for video #{@stream.video_id}"
         rename_dotfiles(ffmpeg_exited: true)
         save_durations_from_manifest
         cleanup_transcode_manifest
@@ -163,19 +163,19 @@ module Hls
 
       return if parsed.empty?
 
-      scene = Scene.find_by(id: @stream.scene_id)
-      return unless scene
+      video = Video.find_by(id: @stream.video_id)
+      return unless video
 
-      existing = scene.hls_segment_durations || {}
+      existing = video.hls_segment_durations || {}
       existing = {} unless existing.is_a?(Hash)
       merged = existing.merge(parsed.transform_keys(&:to_s))
 
       if merged != existing
-        scene.update_column(:hls_segment_durations, merged)
-        Rails.logger.debug "HLS Transcode: saved #{merged.size} durations for scene #{@stream.scene_id}"
+        video.update_column(:hls_segment_durations, merged)
+        Rails.logger.debug "HLS Transcode: saved #{merged.size} durations for video #{@stream.video_id}"
       end
     rescue ActiveRecord::RecordNotFound
-      # Scene deleted
+      # Video deleted
     end
 
     # Remove the throwaway manifest that FFmpeg writes.

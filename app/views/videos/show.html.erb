@@ -1,0 +1,248 @@
+<% content_for :title, @video.title.presence || "Video" %>
+
+<%# Full-width player — data-turbo-permanent persists it during video-to-video navigation %>
+<div id="video-player"
+     data-controller="player"
+     data-player-streams-value="<%= @stream_endpoints.to_json %>"
+     data-player-poster-value="<%= screenshot_video_path(@video) %>"
+     data-player-vtt-value="<%= chapter_vtt_video_path(@video) %>"
+     data-player-video-id-value="<%= @video.id %>"
+     data-player-title-value="<%= j(@video.title.presence || File.basename(@video.path, '.*')) %>"
+     class="bg-black relative">
+  <video id="video-player-element"
+          class="video-js vjs-default-skin vjs-big-play-centered w-full max-h-[75vh]"
+          controls
+          preload="metadata">
+  </video>
+  <div class="player-overlay" data-player-target="overlay">
+    <button class="player-overlay-btn" data-action="click->player#skipBack" aria-label="Skip back 10 seconds">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M12.5 3C7.81 3 4 6.81 4 11.5H1l4 4 4-4H6c0-3.59 2.91-6.5 6.5-6.5S19 7.91 19 11.5 16.09 18 12.5 18c-1.8 0-3.42-.73-4.6-1.9l-1.42 1.42A8.48 8.48 0 0 0 12.5 20c4.69 0 8.5-3.81 8.5-8.5S17.19 3 12.5 3z"/><text x="12.5" y="14.5" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">10</text></svg>
+    </button>
+    <button class="player-overlay-btn player-overlay-btn--play" data-action="click->player#togglePlay" data-player-target="playBtn" aria-label="Play/Pause">
+      <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48"><path d="M8 5v14l11-7z"/></svg>
+      <svg class="pause-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="48" height="48" style="display:none"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+    </button>
+    <button class="player-overlay-btn" data-action="click->player#skipForward" aria-label="Skip forward 10 seconds">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="32" height="32"><path d="M11.5 3C6.81 3 3 6.81 3 11.5S6.81 20 11.5 20a8.48 8.48 0 0 0 5.92-2.48l-1.42-1.42A6.46 6.46 0 0 1 11.5 18C7.91 18 5 15.09 5 11.5S7.91 5 11.5 5 18 7.91 18 11.5h-3l4 4 4-4h-3C20 6.81 16.19 3 11.5 3z"/><text x="11.5" y="14.5" text-anchor="middle" font-size="7" font-weight="bold" fill="currentColor">10</text></svg>
+    </button>
+  </div>
+</div>
+
+<div class="max-w-screen-2xl mx-auto px-4 sm:px-6 py-6">
+  <div class="lg:flex lg:gap-8">
+
+    <%# Left: metadata %>
+    <div class="lg:w-72 xl:w-80 shrink-0 mb-6 lg:mb-0">
+
+      <%# Title + studio + rating %>
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div class="flex-1 min-w-0">
+          <div data-controller="inline-edit"
+               data-inline-edit-url-value="<%= video_path(@video) %>"
+               data-inline-edit-field-value="title"
+               class="rounded transition-all">
+            <h1 data-inline-edit-target="display"
+                data-action="click->inline-edit#edit"
+                data-placeholder="Untitled"
+                class="text-xl font-bold text-gray-900 dark:text-gray-100 leading-snug cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400">
+              <%= @video.title.presence || File.basename(@video.path, ".*") %>
+            </h1>
+            <input type="text"
+                   data-inline-edit-target="input"
+                   data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                   data-original-value="<%= @video.title.presence || File.basename(@video.path, ".*") %>"
+                   value="<%= @video.title.presence || File.basename(@video.path, ".*") %>"
+                   class="w-full text-xl font-bold bg-transparent border border-indigo-400 rounded px-1 py-0.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                   hidden>
+          </div>
+          <% if @video.studio.present? %>
+            <%= link_to @video.studio.name, studio_path(@video.studio),
+                  class: "text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 dark:hover:text-indigo-300 font-medium" %>
+          <% end %>
+        </div>
+        <div data-controller="star-rating"
+             data-star-rating-url-value="<%= video_path(@video) %>"
+             data-star-rating-rating-value="<%= @video.rating || 0 %>"
+             class="shrink-0 flex gap-0.5">
+          <% 5.times do |i| %>
+            <button data-star-rating-target="star"
+                    data-action="click->star-rating#set"
+                    data-index="<%= i %>"
+                    type="button"
+                    class="text-gray-400 cursor-pointer text-lg">★</button>
+          <% end %>
+        </div>
+      </div>
+
+      <%# Quick stats %>
+      <dl class="grid grid-cols-2 gap-3 bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-4 text-sm">
+        <div data-controller="inline-edit"
+             data-inline-edit-url-value="<%= video_path(@video) %>"
+             data-inline-edit-field-value="date"
+             class="rounded transition-all">
+          <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Date</dt>
+          <dd data-inline-edit-target="display"
+              data-action="click->inline-edit#edit"
+              data-placeholder="—"
+              class="font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 min-h-[1.5em]">
+            <%= @video.date.present? ? @video.date.strftime("%b %-d, %Y") : "—" %>
+          </dd>
+          <input type="date"
+                 data-inline-edit-target="input"
+                 data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                 data-original-value="<%= @video.date %>"
+                 value="<%= @video.date %>"
+                 class="w-full text-sm bg-transparent border border-indigo-400 rounded px-1 py-0.5 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                 hidden>
+        </div>
+        <% if @video.duration.present? %>
+          <div>
+            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Duration</dt>
+            <dd class="font-medium text-gray-900 dark:text-gray-100"><%= format_duration(@video.duration) %></dd>
+          </div>
+        <% end %>
+        <% if @video.height.present? %>
+          <div>
+            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Resolution</dt>
+            <dd class="font-medium text-gray-900 dark:text-gray-100"><%= @video.width %>×<%= @video.height %></dd>
+          </div>
+        <% end %>
+        <% if @video.size.present? %>
+          <div>
+            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Size</dt>
+            <dd class="font-medium text-gray-900 dark:text-gray-100"><%= format_filesize(@video.size) %></dd>
+          </div>
+        <% end %>
+        <% if @video.video_codec.present? %>
+          <div>
+            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Video</dt>
+            <dd class="font-medium text-gray-900 dark:text-gray-100 text-xs"><%= @video.video_codec %> · <%= @video.framerate&.round %>fps</dd>
+          </div>
+        <% end %>
+        <% if @video.audio_codec.present? %>
+          <div>
+            <dt class="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wide">Audio</dt>
+            <dd class="font-medium text-gray-900 dark:text-gray-100 text-xs"><%= @video.audio_codec %></dd>
+          </div>
+        <% end %>
+      </dl>
+
+      <%# Details/description — inline editable %>
+      <div class="mb-4"
+           data-controller="inline-edit"
+           data-inline-edit-url-value="<%= video_path(@video) %>"
+           data-inline-edit-field-value="details">
+        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">Details</h3>
+        <p data-inline-edit-target="display"
+           data-action="click->inline-edit#edit"
+           data-placeholder="Click to add details…"
+           class="text-sm text-gray-700 dark:text-gray-300 leading-relaxed cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 min-h-[1.5em]">
+          <%= @video.details.presence || "Click to add details…" %>
+        </p>
+        <textarea data-inline-edit-target="input"
+                  data-action="blur->inline-edit#save keydown->inline-edit#keydown"
+                  data-original-value="<%= @video.details %>"
+                  rows="4"
+                  class="w-full text-sm bg-transparent border border-indigo-400 rounded px-2 py-1 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  hidden><%= @video.details %></textarea>
+      </div>
+
+      <%# Tags %>
+      <div class="mb-4"
+           data-controller="tag-select"
+           data-tag-select-url-value="<%= video_path(@video) %>"
+           data-tag-select-search-url-value="<%= search_tags_path(format: :json) %>"
+           data-tag-select-create-url-value="<%= tags_path %>">
+        <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Tags</h3>
+        <select multiple placeholder="Search tags…">
+          <% @video.tags.each do |tag| %>
+            <option value="<%= tag.id %>" selected><%= tag.name %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <%# Markers %>
+      <% if @markers.any? %>
+        <div data-controller="markers"
+             data-markers-video-id-value="<%= @video.id %>">
+          <h3 class="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-2">Video Markers</h3>
+          <div class="space-y-1 max-h-64 overflow-y-auto">
+            <% @markers.each do |marker| %>
+              <button data-action="click->markers#seek"
+                      data-seconds="<%= marker.seconds.to_i %>"
+                      class="w-full text-left flex items-center gap-3 p-2 rounded hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-sm group">
+                <span class="font-mono text-xs text-gray-400 w-12 shrink-0 group-hover:text-indigo-600 dark:group-hover:text-indigo-400">
+                  <%= format_duration(marker.seconds) %>
+                </span>
+                <% if marker.end_seconds.present? %>
+                  <span class="font-mono text-xs text-gray-400 shrink-0">
+                    → <%= format_duration(marker.end_seconds) %>
+                  </span>
+                <% end %>
+                <span class="text-gray-700 dark:text-gray-300 group-hover:text-indigo-700 dark:group-hover:text-indigo-300 truncate"><%= marker.title %></span>
+                <span class="text-xs text-indigo-400 dark:text-indigo-300 ml-auto shrink-0"><%= marker.primary_tag.name %></span>
+              </button>
+            <% end %>
+          </div>
+        </div>
+      <% end %>
+
+    </div>
+
+    <%# Right: people %>
+    <div class="flex-1 min-w-0">
+      <h2 class="text-sm font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wide mb-3">People</h2>
+
+      <%# TomSelect people picker %>
+      <div class="mb-4"
+           data-controller="people-select"
+           data-people-select-url-value="<%= video_path(@video) %>"
+           data-people-select-search-url-value="<%= search_people_path(format: :json) %>"
+           data-people-select-create-url-value="<%= people_path %>">
+        <select multiple placeholder="Search or add people…">
+          <% @video.people.each do |person| %>
+            <option value="<%= person.id %>" selected><%= person.name %></option>
+          <% end %>
+        </select>
+      </div>
+
+      <turbo-frame id="person-cards">
+        <% if @video.people.any? %>
+          <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 gap-3 mb-6">
+            <% @video.people.each do |person| %>
+              <%= render "shared/person_card", person: person %>
+            <% end %>
+          </div>
+        <% end %>
+      </turbo-frame>
+
+      <%# File path (collapse) %>
+      <details class="mt-4">
+        <summary class="text-xs text-gray-400 dark:text-gray-500 cursor-pointer hover:text-gray-600 dark:hover:text-gray-400">File info</summary>
+        <div class="mt-2 text-xs text-gray-500 dark:text-gray-400 font-mono break-all bg-gray-50 dark:bg-gray-800 rounded p-3">
+          <p><strong>Path:</strong> <%= @video.path %></p>
+          <% if @video.url.present? %>
+            <p class="mt-1"><strong>URL:</strong>
+              <%= link_to @video.url, @video.url, target: "_blank", class: "text-indigo-600 dark:text-indigo-400 hover:underline" %>
+            </p>
+          <% end %>
+           <div class="mt-2">
+             <p class="font-semibold mb-1">Checksums:</p>
+             <% @video.checksums.group_by(&:checksum_type).each do |type, checksums| %>
+               <p class="mt-1 flex items-center gap-2">
+                 <strong><%= type&.humanize || 'Unknown' %>:</strong>
+                 <% checksums.each do |checksum| %>
+                   <code class="bg-gray-100 dark:bg-gray-700 px-1 rounded text-xs"><%= checksum.hash_value %></code>
+                   <% if checksum.checksum_type.to_s == 'opensubtitles' %>
+                     <span class="text-indigo-600 dark:text-indigo-400 text-[10px]">(default)</span>
+                   <% end %>
+                 <% end %>
+               </p>
+             <% end %>
+           </div>
+        </div>
+      </details>
+    </div>
+
+  </div>
+</div>

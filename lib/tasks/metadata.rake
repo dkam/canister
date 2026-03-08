@@ -1,77 +1,35 @@
 namespace :metadata do
   desc "Import JSON metadata"
   task import: ["db:drop", "db:create", "db:migrate"] do
-    Canister::Manager.instance.import(job_id: "rake")
+    MediaManager.instance.import(job_id: "rake")
   end
 
   desc "Export JSON metadata."
   task export: :environment do
-    Canister::Manager.instance.export(job_id: "rake")
+    MediaManager.instance.export(job_id: "rake")
   end
 
   desc "Scan the stash directory for new files"
   task scan: :environment do
-    Canister::Manager.instance.scan(job_id: "rake")
+    ScanService.run
   end
 
-  desc "Generates sprites and a VTT file for scrubbing video"
-  task generate_sprites: :environment do
-    Canister::Manager.instance.generate(
-      job_id: "rake",
-      sprites: true,
-      previews: false,
-      markers: false,
-      transcodes: false
-    )
-  end
-
-  desc "Generates webm files for mouseover previews"
+  desc "Enqueue preview generation for all videos"
   task generate_previews: :environment do
-    Canister::Manager.instance.generate(
-      job_id: "rake",
-      sprites: false,
-      previews: true,
-      markers: false,
-      transcodes: false
-    )
+    videos = Video.all
+    puts "Enqueuing preview generation for #{videos.count} videos..."
+    videos.each { |video| GeneratePreviewJob.perform_later(video.id) }
   end
 
-  desc "Generates transcodes for videos that dont support HTML5 video"
-  task generate_transcodes: :environment do
-    Canister::Manager.instance.generate(
-      job_id: "rake",
-      sprites: false,
-      previews: false,
-      markers: false,
-      transcodes: true
-    )
-  end
-
-  desc "Generates marker previews"
-  task generate_marker_previews: :environment do
-    Canister::Manager.instance.generate(
-      job_id: "rake",
-      sprites: false,
-      previews: false,
-      markers: true,
-      transcodes: false
-    )
-  end
-
-  desc "Generates all"
-  task generate_all: :environment do
-    Canister::Manager.instance.generate(job_id: "rake")
-  end
-
-  desc "Queue remux/transcode jobs for all scenes needing processing"
+  desc "Queue remux/transcode jobs for all videos needing processing"
   task process_videos: :environment do
-    scenes = Scene.needing_processing
-    puts "Queuing #{scenes.count} scenes for processing..."
-    scenes.each { |scene| PrepareVideoJob.perform_later(scene.id) }
+    videos = Video.needing_processing
+    puts "Queuing #{videos.count} videos for processing..."
+    videos.each { |video| TranscodeJob.perform_later(video.id) }
   end
 
-  desc "Cleanup generated files for missing scenes"
+  desc "Cleanup generated files for missing videos"
   task cleanup: :environment do
-    Canister::Manager.instance.clean(job_id: "rake")
+    MediaManager.instance.clean(job_id: "rake")
   end
 end

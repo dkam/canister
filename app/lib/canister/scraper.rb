@@ -14,7 +14,7 @@ module Canister::Scraper
 
   class SeleniumScraper < Base
     def initialize(studio:, page: 1, action: :scrape)
-      @manager = Canister::Manager.instance
+      @manager = MediaManager.instance
 
       case action
       when String
@@ -83,10 +83,10 @@ module Canister::Scraper
 
     def populate
       scraped_items.each { |item|
-        next if item.scene.nil?
-        next unless item.scene.studio.nil?
+        next if item.video.nil?
+        next unless item.video.studio.nil?
         @manager.info("Populating #{item.title}")
-        item.populate_scene
+        item.populate_video
       }
     end
 
@@ -133,12 +133,12 @@ module Canister::Scraper
         end
       end
 
-      def download_scene(scraped_item)
+      def download_video(scraped_item)
         path = File.join(Canister::STASH_DOWNLOADS_DIRECTORY, scraped_item.video_filename)
         if File.exist?(path)
           @manager.info("Already downloaded #{scraped_item.video_filename}.")
-        elsif !scraped_item.scene.nil?
-          @manager.info("Scene already exists #{scraped_item.scene.path}.  Not downloading...")
+        elsif !scraped_item.video.nil?
+          @manager.info("Video already exists #{scraped_item.video.path}.  Not downloading...")
         else
           @manager.info("Downloading #{scraped_item.video_filename}...")
           download_file(url: scraped_item.video_url, filename: scraped_item.video_filename)

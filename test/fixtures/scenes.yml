@@ -1,7 +1,0 @@
-scene:
-  title: 'Scene Title'
-  details: 'Details'
-  url: 'http://google.com'
-  date: '2000-12-31'
-  rating: 5
-  path: '/sample/path.mp4'

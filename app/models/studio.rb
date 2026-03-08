@@ -1,6 +1,6 @@
 class Studio < ApplicationRecord
   has_one_attached :image
-  has_many :scenes
+  has_many :videos
 
   scoped_search on: [:name]
 

@@ -2,27 +2,27 @@ require "test_helper"
 
 class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   def setup
-    @scene = Scene.new(
+    @video = Video.new(
       path: "/test/video.mp4",
       video_codec: "h264",
       audio_codec: "aac",
-      title: "Test Scene"
+      title: "Test Video"
     )
     allow_file_to_exist
   end
 
   def allow_file_to_exist
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.define_singleton_method(:stream_file_exists?) { true }
   end
 
   def disallow_file_to_exist
-    @scene.define_singleton_method(:stream_file_exists?) { false }
+    @video.define_singleton_method(:stream_file_exists?) { false }
   end
 
   test "available_streams includes direct stream for H264/AAC/MP4" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
@@ -42,9 +42,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for H264/MP3/MP4" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "mp3")
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "mp3")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
@@ -56,9 +56,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for H264/AAC/M4V" do
-    @scene.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
+    @video.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
@@ -66,9 +66,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for H264/AAC/MOV" do
-    @scene.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
+    @video.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
@@ -76,9 +76,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for VP8/Opus/WebM" do
-    @scene.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
+    @video.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     assert_equal 3, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
@@ -94,9 +94,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for VP8/Vorbis/WebM" do
-    @scene.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "vorbis")
+    @video.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "vorbis")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
@@ -104,54 +104,54 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes direct stream for VP9/Opus/WebM" do
-    @scene.update(path: "/test/video.webm", video_codec: "vp9", audio_codec: "opus")
+    @video.update(path: "/test/video.webm", video_codec: "vp9", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_not_nil direct_stream
   end
 
   test "available_streams excludes direct stream for H264/Opus/MP4 (invalid audio for container)" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_nil direct_stream
   end
 
   test "available_streams excludes direct stream for H264/Opus/WebM (invalid video for container)" do
-    @scene.update(path: "/test/video.webm", video_codec: "h264", audio_codec: "opus")
+    @video.update(path: "/test/video.webm", video_codec: "h264", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_nil direct_stream
   end
 
   test "available_streams excludes direct stream for H264/AAC/MKV (invalid container for browser)" do
-    @scene.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
+    @video.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_nil direct_stream
   end
 
   test "available_streams excludes direct stream for H264/Vorbis/MP4 (invalid audio for container)" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "vorbis")
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "vorbis")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     direct_stream = streams.find { |s| s[:kind] == :direct }
     assert_nil direct_stream
   end
 
   test "available_streams includes MP4 progressive stream for H264" do
-    @scene.update(video_codec: "h264", audio_codec: "aac")
+    @video.update(video_codec: "h264", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -163,9 +163,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes MP4 progressive stream for H264 with audio transcode" do
-    @scene.update(video_codec: "h264", audio_codec: "opus")
+    @video.update(video_codec: "h264", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -175,9 +175,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes MP4 progressive stream for H265" do
-    @scene.update(video_codec: "h265", audio_codec: "aac")
+    @video.update(video_codec: "h265", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -187,9 +187,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes MP4 progressive stream for VP8 with audio transcode" do
-    @scene.update(video_codec: "vp8", audio_codec: "opus")
+    @video.update(video_codec: "vp8", audio_codec: "opus")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -199,9 +199,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes MP4 progressive stream for VP9 with audio transcode" do
-    @scene.update(video_codec: "vp9", audio_codec: "vorbis")
+    @video.update(video_codec: "vp9", audio_codec: "vorbis")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -211,9 +211,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams includes MP4 progressive stream for VP9 with AAC" do
-    @scene.update(video_codec: "vp9", audio_codec: "aac")
+    @video.update(video_codec: "vp9", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -223,18 +223,18 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams excludes MP4 progressive stream for unsupported video codec" do
-    @scene.update(video_codec: "unreal", audio_codec: "aac")
+    @video.update(video_codec: "unreal", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_nil mp4_stream
   end
 
   test "available_streams includes MP4 progressive stream for AV1" do
-    @scene.update(video_codec: "av1", audio_codec: "aac")
+    @video.update(video_codec: "av1", audio_codec: "aac")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     mp4_stream = streams.find { |s| s[:kind] == :progressive }
     assert_not_nil mp4_stream
@@ -244,9 +244,9 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "available_streams handles missing audio codec" do
-    @scene.update(video_codec: "h264", audio_codec: "")
+    @video.update(video_codec: "h264", audio_codec: "")
 
-    streams = @scene.available_streams
+    streams = @video.available_streams
 
     assert_equal 2, streams.length
     direct_stream = streams.find { |s| s[:kind] == :direct }
@@ -262,134 +262,134 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "direct_streamable? returns true for H264/AAC/MP4" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    assert @scene.send(:direct_streamable?)
+    assert @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for H264/AAC/M4V" do
-    @scene.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.m4v", video_codec: "h264", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    assert @scene.send(:direct_streamable?)
+    assert @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for H264/AAC/MOV" do
-    @scene.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.mov", video_codec: "h264", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    assert @scene.send(:direct_streamable?)
+    assert @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns true for VP8/Opus/WebM" do
-    @scene.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.webm", video_codec: "vp8", audio_codec: "opus")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    assert @scene.send(:direct_streamable?)
+    assert @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/Opus/MP4" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "opus")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    refute @scene.send(:direct_streamable?)
+    refute @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/AAC/MKV" do
-    @scene.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.mkv", video_codec: "h264", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    refute @scene.send(:direct_streamable?)
+    refute @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for H264/AAC/AVI" do
-    @scene.update(path: "/test/video.avi", video_codec: "h264", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.avi", video_codec: "h264", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    refute @scene.send(:direct_streamable?)
+    refute @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false for unsupported video codec" do
-    @scene.update(path: "/test/video.mp4", video_codec: "unreal", audio_codec: "aac")
-    @scene.define_singleton_method(:stream_file_exists?) { true }
+    @video.update(path: "/test/video.mp4", video_codec: "unreal", audio_codec: "aac")
+    @video.define_singleton_method(:stream_file_exists?) { true }
 
-    refute @scene.send(:direct_streamable?)
+    refute @video.send(:direct_streamable?)
   end
 
   test "direct_streamable? returns false when file doesn't exist" do
-    @scene.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
+    @video.update(path: "/test/video.mp4", video_codec: "h264", audio_codec: "aac")
     disallow_file_to_exist
 
-    refute @scene.send(:direct_streamable?)
+    refute @video.send(:direct_streamable?)
   end
 
   test "build_mp4_stream returns nil for unsupported video codec" do
-    @scene.update(video_codec: "unreal", audio_codec: "aac")
+    @video.update(video_codec: "unreal", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_nil result
   end
 
   test "build_mp4_stream sets video_copy true for H264" do
-    @scene.update(video_codec: "h264", audio_codec: "aac")
+    @video.update(video_codec: "h264", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     assert result[:video_copy]
   end
 
   test "build_mp4_stream sets video_copy false for H265" do
-    @scene.update(video_codec: "h265", audio_codec: "aac")
+    @video.update(video_codec: "h265", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     refute result[:video_copy]
   end
 
   test "build_mp4_stream sets audio_copy true for AAC" do
-    @scene.update(video_codec: "h264", audio_codec: "aac")
+    @video.update(video_codec: "h264", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     refute result[:audio_transcode]
   end
 
   test "build_mp4_stream sets audio_copy true for MP3" do
-    @scene.update(video_codec: "h264", audio_codec: "mp3")
+    @video.update(video_codec: "h264", audio_codec: "mp3")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     refute result[:audio_transcode]
   end
 
   test "build_mp4_stream sets audio_transcode true for Opus" do
-    @scene.update(video_codec: "h264", audio_codec: "opus")
+    @video.update(video_codec: "h264", audio_codec: "opus")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     assert result[:audio_transcode]
   end
 
   test "build_mp4_stream sets audio_transcode true for Vorbis" do
-    @scene.update(video_codec: "h264", audio_codec: "vorbis")
+    @video.update(video_codec: "h264", audio_codec: "vorbis")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     assert result[:audio_transcode]
   end
 
   test "build_mp4_stream sets audio_transcode true for missing audio" do
-    @scene.update(video_codec: "h264", audio_codec: "")
+    @video.update(video_codec: "h264", audio_codec: "")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_not_nil result
     assert result[:audio_transcode]
@@ -397,33 +397,33 @@ class StreamableTest < ActiveSupport::TestCaseWithoutFixtures
   end
 
   test "build_mp4_stream label for H264 copy only" do
-    @scene.update(video_codec: "h264", audio_codec: "aac")
+    @video.update(video_codec: "h264", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_equal "MP4 (H.264 copy)", result[:label]
   end
 
   test "build_mp4_stream label for H264 copy with audio transcode" do
-    @scene.update(video_codec: "h264", audio_codec: "opus")
+    @video.update(video_codec: "h264", audio_codec: "opus")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_equal "MP4 (H.264 copy) AAC transcode", result[:label]
   end
 
   test "build_mp4_stream label for full transcode" do
-    @scene.update(video_codec: "h265", audio_codec: "aac")
+    @video.update(video_codec: "h265", audio_codec: "aac")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_equal "MP4", result[:label]
   end
 
   test "build_mp4_stream label for audio transcode only" do
-    @scene.update(video_codec: "h265", audio_codec: "opus")
+    @video.update(video_codec: "h265", audio_codec: "opus")
 
-    result = @scene.send(:build_mp4_stream)
+    result = @video.send(:build_mp4_stream)
 
     assert_equal "MP4 AAC transcode", result[:label]
   end

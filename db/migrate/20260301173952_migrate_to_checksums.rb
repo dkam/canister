@@ -3,7 +3,7 @@ class MigrateToChecksums < ActiveRecord::Migration[8.1]
     require_relative "../../lib/open_subtitles_hash"
 
     # Migrate scenes - calculate both opensubtitles and xxhash
-    Scene.find_each.with_index do |scene, i|
+    Video.find_each.with_index do |scene, i|
       old_checksum = scene.read_attribute(:checksum)
       next unless old_checksum
 
@@ -28,7 +28,7 @@ class MigrateToChecksums < ActiveRecord::Migration[8.1]
         end
       end
 
-      puts "#{i}: Scene #{scene.id}" if (i + 1) % 10 == 0
+      puts "#{i}: Video #{scene.id}" if (i + 1) % 10 == 0
     end
 
     # Migrate galleries - xxhash only

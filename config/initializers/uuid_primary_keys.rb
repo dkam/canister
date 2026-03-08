@@ -17,7 +17,9 @@ module UuidPrimaryKeyDefault
     end
 
     def uuid_primary_key?
-      table_name && primary_key && schema_cache.columns_hash(table_name)[primary_key]&.type == :uuid
+      return false unless table_name && primary_key
+      return false unless connection_pool.db_config.name == "primary"
+      schema_cache.columns_hash(table_name)[primary_key]&.type == :uuid
     end
 
     PendingUuidDefault = Struct.new(:name) do

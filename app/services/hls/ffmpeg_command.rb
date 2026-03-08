@@ -1,7 +1,7 @@
 module Hls
   class FfmpegCommand
     # Build FFmpeg command for HLS transcode.
-    # Single process per scene — runs until killed or EOF.
+    # Single process per video — runs until killed or EOF.
     # Produces manifest.m3u8 + dotfile segments (.N.ts).
     def self.build(input:, output_dir:, config:, from_segment: 0)
       cmd = base_cmd

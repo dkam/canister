@@ -1,6 +1,6 @@
 class CreateScenes < ActiveRecord::Migration[8.1]
   def change
-    create_table :scenes, id: :uuid do |t|
+    create_table :videos, id: :uuid do |t|
       t.string :audio_codec
       t.integer :bitrate
       t.string :checksum
@@ -23,7 +23,7 @@ class CreateScenes < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :scenes, :checksum
-    add_index :scenes, :path, unique: true
+    add_index :videos, :checksum
+    add_index :videos, :path, unique: true
   end
 end

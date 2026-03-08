@@ -2,7 +2,7 @@ import { Controller } from "@hotwired/stimulus"
 import TomSelect from "tom-select"
 
 // TomSelect-based multi-select for tags.
-// Values: url (PATCH scene endpoint), searchUrl (GET /tags/search.json)
+// Values: url (PATCH video endpoint), searchUrl (GET /tags/search.json)
 export default class extends Controller {
   static values = { url: String, searchUrl: String, createUrl: String }
 
@@ -45,7 +45,7 @@ export default class extends Controller {
             "X-CSRF-Token": csrfToken,
             "Accept": "application/json"
           },
-          body: JSON.stringify({ scene: { tag_ids: ids } })
+          body: JSON.stringify({ video: { tag_ids: ids } })
         })
       }
     })

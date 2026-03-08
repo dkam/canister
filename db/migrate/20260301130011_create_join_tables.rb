@@ -1,17 +1,17 @@
 class CreateJoinTables < ActiveRecord::Migration[8.1]
   def change
-    create_table :galleries_performers, id: false do |t|
+    create_table :galleries_people, id: false do |t|
       t.uuid :gallery_id, null: false
-      t.uuid :performer_id, null: false
+      t.uuid :person_id, null: false
     end
-    add_index :galleries_performers, :gallery_id
-    add_index :galleries_performers, :performer_id
+    add_index :galleries_people, :gallery_id
+    add_index :galleries_people, :person_id
 
-    create_table :performers_scenes, id: false do |t|
-      t.uuid :performer_id, null: false
-      t.uuid :scene_id, null: false
+    create_table :people_videos, id: false do |t|
+      t.uuid :person_id, null: false
+      t.uuid :video_id, null: false
     end
-    add_index :performers_scenes, :performer_id
-    add_index :performers_scenes, :scene_id
+    add_index :people_videos, :person_id
+    add_index :people_videos, :video_id
   end
 end

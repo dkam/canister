@@ -3,8 +3,8 @@ module Hls
     # Build an estimated manifest with uniform segment durations.
     # Single-process model: no discontinuity tags needed since all segments
     # come from one FFmpeg encode (killed and restarted on seek).
-    def self.resolve(scene, config, &url_builder)
-      estimated(scene.duration.to_f, &url_builder)
+    def self.resolve(video, config, &url_builder)
+      estimated(video.duration.to_f, &url_builder)
     end
 
     def self.estimated(duration, &url_builder)

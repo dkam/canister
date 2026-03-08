@@ -1,0 +1,46 @@
+<div id="<%= dom_id(library) %>">
+  <h1 class="text-xl font-bold text-gray-900 dark:text-gray-100"><%= library.name %></h1>
+
+  <dl class="space-y-3 text-sm">
+    <div>
+      <dt class="text-gray-500 dark:text-gray-400">Kind</dt>
+      <dd>
+        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
+          <%= library.kind %>
+        </span>
+      </dd>
+    </div>
+    <div>
+      <dt class="text-gray-500 dark:text-gray-400">Path</dt>
+      <dd class="font-mono text-gray-900 dark:text-gray-100 break-all"><%= library.path %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500 dark:text-gray-400">Read Only</dt>
+      <dd class="text-gray-900 dark:text-gray-100"><%= library.read_only? ? "Yes" : "No" %></dd>
+    </div>
+    <div>
+      <dt class="text-gray-500 dark:text-gray-400">Default Video Kind</dt>
+      <dd class="text-gray-900 dark:text-gray-100"><%= library.default_video_kind || "video" %></dd>
+    </div>
+    <% if library.username.present? %>
+      <div>
+        <dt class="text-gray-500 dark:text-gray-400">Username</dt>
+        <dd class="text-gray-900 dark:text-gray-100"><%= library.username %></dd>
+      </div>
+    <% end %>
+    <div>
+      <dt class="text-gray-500 dark:text-gray-400">Videos</dt>
+      <dd class="text-gray-900 dark:text-gray-100"><%= library.videos.size %></dd>
+    </div>
+  </dl>
+
+  <div class="flex flex-col gap-2 pt-2 border-t border-gray-200 dark:border-gray-700">
+    <%= link_to "Edit", edit_library_path(library),
+          class: "text-sm text-indigo-600 dark:text-indigo-400 hover:underline" %>
+    <%= button_to "Scan", scan_library_path(library), method: :post,
+          class: "text-sm text-indigo-600 dark:text-indigo-400 hover:underline text-left" %>
+    <%= button_to "Delete", library_path(library), method: :delete,
+          data: { turbo_confirm: "Delete library \"#{library.name}\" and all its videos?" },
+          class: "text-sm text-red-600 dark:text-red-400 hover:underline text-left" %>
+  </div>
+</div>

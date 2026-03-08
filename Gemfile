@@ -61,4 +61,9 @@ group :development, :test do
   gem 'debug', platforms: [:mri, :mingw, :x64_mingw]
 end
 
+group :test do
+  gem 'webmock'
+  gem 'vcr'
+end
+
 

@@ -16,41 +16,41 @@ module Hls
     def initialize
       @mutex = Mutex.new
       @cv = ConditionVariable.new
-      @streams = {} # scene_id => TranscodeProcess
+      @streams = {} # video_id => TranscodeProcess
       @cache = SegmentCache.new
       @monitor_thread = nil
       @shutting_down = false
     end
 
     # Called from stream_hls_segment — returns :ok or :not_found.
-    def request_segment(scene, segment_idx, config)
-      hls_dir = @cache.hls_dir(scene.id)
+    def request_segment(video, segment_idx, config)
+      hls_dir = @cache.hls_dir(video.id)
       segment_path = hls_dir.join("#{segment_idx}.ts")
 
       # Fast path: segment already on disk
       if segment_path.exist?
         @mutex.synchronize do
-          tp = @streams[scene.id]
+          tp = @streams[video.id]
           tp&.touch(segment_idx)
-          @cache.touch(scene.id)
+          @cache.touch(video.id)
         end
         return :ok
       end
 
       @mutex.synchronize do
-        @cache.touch(scene.id)
-        tp = @streams[scene.id]
+        @cache.touch(video.id)
+        tp = @streams[video.id]
 
         if tp.nil? || !tp.running?
           # No process running — start from requested segment
-          tp = ensure_transcode(scene, config)
-          tp.start(scene, config, segment_idx, @cache)
+          tp = ensure_transcode(video, config)
+          tp.start(video, config, segment_idx, @cache)
           ensure_monitor_running
         elsif needs_restart?(tp, segment_idx)
           # Process running but segment is behind or too far ahead — kill and restart
-          Rails.logger.info "HLS StreamManager: restarting for scene #{scene.id} (requested #{segment_idx}, highest #{tp.highest_generated})"
+          Rails.logger.info "HLS StreamManager: restarting for video #{video.id} (requested #{segment_idx}, highest #{tp.highest_generated})"
           tp.stop
-          tp.start(scene, config, segment_idx, @cache)
+          tp.start(video, config, segment_idx, @cache)
         else
           # Process is running and will reach this segment — just wait
           tp.touch(segment_idx)
@@ -79,8 +79,8 @@ module Hls
 
     private
 
-    def ensure_transcode(scene, config)
-      @streams[scene.id] ||= TranscodeProcess.new
+    def ensure_transcode(video, config)
+      @streams[video.id] ||= TranscodeProcess.new
     end
 
     def needs_restart?(tp, segment_idx)
@@ -110,7 +110,7 @@ module Hls
         broadcast = false
 
         @mutex.synchronize do
-          @streams.each do |scene_id, tp|
+          @streams.each do |video_id, tp|
             next unless tp.stream
 
             # Monitor tick: rename dotfiles, detect exit
@@ -118,22 +118,22 @@ module Hls
 
             # Buffer limit: stop transcode if enough segments buffered ahead
             if tp.running? && buffer_full?(tp)
-              Rails.logger.debug "HLS StreamManager: buffer full for scene #{scene_id}, pausing transcode"
+              Rails.logger.debug "HLS StreamManager: buffer full for video #{video_id}, pausing transcode"
               tp.stop
             end
 
             # Idle cleanup: stop transcode if no activity
             if tp.running? && tp.idle_seconds > MAX_IDLE_TIME
-              Rails.logger.info "HLS StreamManager: idle timeout for scene #{scene_id}"
+              Rails.logger.info "HLS StreamManager: idle timeout for video #{video_id}"
               tp.stop
             end
           end
 
           @cv.broadcast if broadcast
 
-          # Evict cache (skip scenes with active transcodes)
+          # Evict cache (skip videos with active transcodes)
           active_ids = @streams.select { |_, tp| tp.running? }.keys.to_set
-          @cache.evict_if_needed(skip_scene_ids: active_ids)
+          @cache.evict_if_needed(skip_video_ids: active_ids)
         end
 
         sleep MONITOR_INTERVAL

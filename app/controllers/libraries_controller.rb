@@ -7,7 +7,9 @@ class LibrariesController < ApplicationController
   end
 
   def show
-    @pagy, @scenes = pagy(@library.scenes.includes(:performers, :studio), limit: 24)
+    videos = @library.videos.includes(:people, :studio)
+    videos = apply_sort(videos)
+    @pagy, @videos = pagy(videos, limit: 24)
   end
 
   def new
@@ -16,8 +18,10 @@ class LibrariesController < ApplicationController
 
   def create
     @library = Library.new(library_params)
+    auto_detect_kind(@library)
     if @library.save
-      redirect_to @library, notice: "Library created."
+      @library.scan
+      redirect_to @library, notice: "Library created. Scan queued."
     else
       render :new, status: :unprocessable_entity
     end
@@ -27,7 +31,9 @@ class LibrariesController < ApplicationController
   end
 
   def update
-    if @library.update(library_params)
+    @library.assign_attributes(library_params)
+    auto_detect_kind(@library)
+    if @library.save
       redirect_to @library, notice: "Library updated."
     else
       render :edit, status: :unprocessable_entity
@@ -44,7 +50,32 @@ class LibrariesController < ApplicationController
     redirect_to @library, notice: "Scan queued for #{@library.name}."
   end
 
+  def detect_kind
+    detector = Library::KindDetector.new(
+      params[:path],
+      username: params[:username],
+      password: params[:password]
+    )
+    render json: { kind: detector.detect }
+  end
+
   private
+
+  def apply_sort(scope)
+    sort = params[:sort].presence || "created_at"
+    direction = params[:direction] == "asc" ? "asc" : "desc"
+
+    case sort
+    when "random"
+      scope.reorder(Arel.sql("RANDOM()"))
+    when "size"
+      scope.reorder(Arel.sql("CAST(videos.size AS INTEGER) #{direction}"))
+    when *%w[created_at title date rating duration path]
+      scope.reorder("videos.#{sort} #{direction}")
+    else
+      scope.reorder("videos.created_at #{direction}")
+    end
+  end
 
   def set_library
     @library = Library.find(params[:id])
@@ -54,5 +85,16 @@ class LibrariesController < ApplicationController
     permitted = params.require(:library).permit(:name, :path, :kind, :read_only, :default_video_kind, :username, :password)
     permitted.delete(:password) if permitted[:password].blank?
     permitted
+  end
+
+  def auto_detect_kind(library)
+    return unless library.kind.blank? || library.kind == "auto"
+    return if library.path.blank?
+
+    library.kind = Library::KindDetector.new(
+      library.path,
+      username: library.username,
+      password: library.password
+    ).detect
   end
 end

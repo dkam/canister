@@ -1,6 +1,6 @@
 class CreatePerformers < ActiveRecord::Migration[8.1]
   def change
-    create_table :performers, id: :uuid do |t|
+    create_table :people, id: :uuid do |t|
       t.string :aliases
       t.date :birthdate
       t.string :career_length
@@ -23,7 +23,7 @@ class CreatePerformers < ActiveRecord::Migration[8.1]
       t.timestamps
     end
 
-    add_index :performers, :checksum
-    add_index :performers, :name
+    add_index :people, :checksum
+    add_index :people, :name
   end
 end

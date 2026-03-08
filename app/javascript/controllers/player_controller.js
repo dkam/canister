@@ -7,7 +7,7 @@ export default class extends Controller {
     streams: { type: Array, default: [] },
     poster: String,
     vtt: String,
-    sceneId: String,
+    videoId: String,
     title: String,
   }
 
@@ -52,7 +52,7 @@ export default class extends Controller {
     }
 
     // Restore saved position
-    const savedTime = sessionStorage.getItem(`canister-scene-${this.sceneIdValue}`)
+    const savedTime = sessionStorage.getItem(`canister-video-${this.videoIdValue}`)
     if (savedTime) {
       this.player.one("loadedmetadata", () => {
         this.player.currentTime(parseFloat(savedTime))
@@ -113,7 +113,7 @@ export default class extends Controller {
 
     document.dispatchEvent(new CustomEvent("canister:playing", {
       detail: {
-        sceneId: this.sceneIdValue,
+        videoId: this.videoIdValue,
         title: this.titleValue,
         url: window.location.href,
         time: this.player.currentTime()
@@ -124,7 +124,7 @@ export default class extends Controller {
     this.player = null
   }
 
-  // Triggered by Turbo when the data attribute updates (scene-to-scene navigation)
+  // Triggered by Turbo when the data attribute updates (video-to-video navigation)
   streamsValueChanged() {
     if (!this.player || !this.streamsValue.length) return
 
@@ -137,7 +137,7 @@ export default class extends Controller {
     this.player.load()
     this._attachSeekHandler(first)
 
-    const savedTime = sessionStorage.getItem(`canister-scene-${this.sceneIdValue}`)
+    const savedTime = sessionStorage.getItem(`canister-video-${this.videoIdValue}`)
     if (savedTime) {
       this.player.one("loadedmetadata", () => {
         this.player.currentTime(parseFloat(savedTime))
@@ -281,15 +281,15 @@ export default class extends Controller {
     const queue = this._loadQueue()
     if (!queue || !queue.ids) return { inQueue: false }
 
-    const sceneId = this.sceneIdValue
-    const idx = queue.ids.indexOf(sceneId)
-    console.debug("[queue]", { sceneId, idx, queueLength: queue.ids.length, first: queue.ids[0], last: queue.ids[queue.ids.length - 1] })
+    const videoId = this.videoIdValue
+    const idx = queue.ids.indexOf(videoId)
+    console.debug("[queue]", { videoId, idx, queueLength: queue.ids.length, first: queue.ids[0], last: queue.ids[queue.ids.length - 1] })
     if (idx === -1) return { inQueue: false }
 
     return {
       inQueue: true,
-      prev: idx > 0 ? `/scenes/${queue.ids[idx - 1]}` : null,
-      next: idx < queue.ids.length - 1 ? `/scenes/${queue.ids[idx + 1]}` : null
+      prev: idx > 0 ? `/videos/${queue.ids[idx - 1]}` : null,
+      next: idx < queue.ids.length - 1 ? `/videos/${queue.ids[idx + 1]}` : null
     }
   }
 
@@ -330,7 +330,7 @@ export default class extends Controller {
       clickHandler: () => { if (this._navUrls.prev) this._navigatePrev() }
     })
     prevBtn.addClass("vjs-nav-prev")
-    prevBtn.controlText("Previous scene")
+    prevBtn.controlText("Previous video")
     prevBtn.el().innerHTML = '<span class="vjs-icon-placeholder" aria-hidden="true">&#9664;&#9664;</span>'
     if (!this._navUrls.prev) prevBtn.disable()
     this.player.controlBar.addChild(prevBtn, {}, 0)
@@ -339,7 +339,7 @@ export default class extends Controller {
       clickHandler: () => { if (this._navUrls.next) this._navigateNext() }
     })
     nextBtn.addClass("vjs-nav-next")
-    nextBtn.controlText("Next scene")
+    nextBtn.controlText("Next video")
     nextBtn.el().innerHTML = '<span class="vjs-icon-placeholder" aria-hidden="true">&#9654;&#9654;</span>'
     if (!this._navUrls.next) nextBtn.disable()
     // Insert after prev button and play button
@@ -445,7 +445,7 @@ export default class extends Controller {
 
   _savePosition() {
     if (this.player && !this.player.paused()) {
-      sessionStorage.setItem(`canister-scene-${this.sceneIdValue}`, this.player.currentTime())
+      sessionStorage.setItem(`canister-video-${this.videoIdValue}`, this.player.currentTime())
     }
   }
 

@@ -4,51 +4,51 @@ module Hls
     MAX_CACHE_SIZE = (ENV.fetch("HLS_MAX_CACHE_SIZE_GB", "5").to_f * 1024 * 1024 * 1024).to_i
 
     def initialize
-      @lru = {} # scene_id => Time (Ruby Hash preserves insertion order)
+      @lru = {} # video_id => Time (Ruby Hash preserves insertion order)
       populate_lru
     end
 
-    def hls_dir(scene_id)
-      Rails.root.join("tmp", "hls", scene_id.to_s)
+    def hls_dir(video_id)
+      Rails.root.join("tmp", "hls", video_id.to_s)
     end
 
-    def segment_exists?(scene_id, segment_idx)
-      hls_dir(scene_id).join("#{segment_idx}.ts").exist?
+    def segment_exists?(video_id, segment_idx)
+      hls_dir(video_id).join("#{segment_idx}.ts").exist?
     end
 
-    def touch(scene_id)
-      @lru.delete(scene_id)
-      @lru[scene_id] = Time.now
+    def touch(video_id)
+      @lru.delete(video_id)
+      @lru[video_id] = Time.now
     end
 
-    def ensure_dir(scene_id)
-      dir = hls_dir(scene_id)
+    def ensure_dir(video_id)
+      dir = hls_dir(video_id)
       FileUtils.mkdir_p(dir)
       dir
     end
 
-    # Evict LRU scenes until under MAX_CACHE_SIZE.
-    # skip_scene_ids: set of scene IDs with active primary processes.
-    def evict_if_needed(skip_scene_ids: Set.new)
+    # Evict LRU videos until under MAX_CACHE_SIZE.
+    # skip_video_ids: set of video IDs with active primary processes.
+    def evict_if_needed(skip_video_ids: Set.new)
       hls_root = Rails.root.join("tmp", "hls")
       return unless hls_root.exist?
 
       total_size = dir_size(hls_root)
       return if total_size <= MAX_CACHE_SIZE
 
-      @lru.each do |scene_id, _|
+      @lru.each do |video_id, _|
         break if total_size <= MAX_CACHE_SIZE
-        next if skip_scene_ids.include?(scene_id)
+        next if skip_video_ids.include?(video_id)
 
-        dir = hls_dir(scene_id)
+        dir = hls_dir(video_id)
         if dir.exist?
-          freed = evict_scene(dir)
+          freed = evict_video(dir)
           total_size -= freed
-          Rails.logger.info "HLS SegmentCache: evicted scene #{scene_id} (#{(freed / 1024.0 / 1024).round(1)} MB freed)"
+          Rails.logger.info "HLS SegmentCache: evicted video #{video_id} (#{(freed / 1024.0 / 1024).round(1)} MB freed)"
         end
 
         unless dir.exist?
-          @lru.delete(scene_id)
+          @lru.delete(video_id)
         end
       end
     end
@@ -66,7 +66,7 @@ module Hls
         .each { |id, _| @lru[id] = Time.now }
     end
 
-    def evict_scene(dir)
+    def evict_video(dir)
       freed = 0
       segments = Dir[File.join(dir, "*.ts")]
 

@@ -1,0 +1,4 @@
+person:
+  name: 'Person'
+  url: 'http://google.com'
+  favorite: false

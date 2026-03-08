@@ -23,19 +23,21 @@
     </div>
   </div>
 
-  <%# Scenes grid %>
+  <%# Videos grid %>
   <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-    <% @scenes.each do |scene| %>
-      <%= render "shared/scene_card", scene: scene %>
+    <% @videos.each do |video| %>
+      <%= render "shared/video_card", video: video %>
     <% end %>
   </div>
 
-  <% if @scenes.empty? %>
-    <p class="text-gray-400 dark:text-gray-500 py-12 text-center">No scenes found for this studio.</p>
+  <% if @videos.empty? %>
+    <p class="text-gray-400 dark:text-gray-500 py-12 text-center">No videos found for this studio.</p>
   <% end %>
 
-  <div class="mt-6 flex justify-center">
-    <%= raw @pagy.series_nav %>
-  </div>
+  <% if @pagy.pages > 1 %>
+    <div class="mt-6 flex justify-center">
+      <%= raw @pagy.series_nav %>
+    </div>
+  <% end %>
 
 </div>

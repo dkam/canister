@@ -1,0 +1,57 @@
+<%# Locals: video %>
+<%= link_to url_for(video),
+      id: dom_id(video),
+      data: {
+        turbo_frame: "_top",
+        controller: "video-card",
+        "video-card-preview-url-value": preview_video_path(video),
+        video_id: video.id
+      },
+      class: "block bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow overflow-hidden group" do %>
+
+  <%# Thumbnail / preview %>
+  <div class="relative aspect-video bg-gray-100 dark:bg-gray-700 overflow-hidden">
+    <img src="<%= screenshot_video_path(video) %>"
+         alt="<%= video.title.presence || File.basename(video.path) %>"
+         loading="lazy"
+         class="w-full h-full object-cover">
+    <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+      <video data-video-card-target="preview"
+             muted loop playsinline
+             class="w-full h-full object-cover hidden"></video>
+    </div>
+    <% if video.duration.present? %>
+      <span class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded font-mono">
+        <%= format_duration(video.duration) %>
+      </span>
+    <% end %>
+  </div>
+
+  <%# Metadata %>
+  <div class="p-3">
+    <h3 class="text-sm font-medium text-gray-900 dark:text-gray-100 truncate leading-snug">
+      <%= video.title.presence || File.basename(video.path, ".*") %>
+    </h3>
+
+    <div class="flex items-center gap-2 mt-1 flex-wrap">
+      <% if video.date.present? %>
+        <span class="text-xs text-gray-400"><%= video.date.year %></span>
+      <% end %>
+      <% if video.studio.present? %>
+        <span class="text-xs bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.5 rounded font-medium">
+          <%= video.studio.name %>
+        </span>
+      <% end %>
+    </div>
+
+    <% if video.people.any? %>
+      <p class="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+        <%= video.people.map(&:name).join(", ") %>
+      </p>
+    <% end %>
+
+    <% if video.rating.present? && video.rating > 0 %>
+      <div class="mt-1 text-xs"><%= rating_stars(video.rating) %></div>
+    <% end %>
+  </div>
+<% end %>

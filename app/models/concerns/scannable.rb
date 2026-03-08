@@ -14,7 +14,7 @@ module Scannable
       scan_paths.each { |relative_path|
         @current += 1
         try {
-          scan_task = Canister::Tasks::Scan.new(path: relative_path, library: library)
+          scan_task = ScanService.new(path: relative_path, library: library)
           scan_task.start
         }
       }

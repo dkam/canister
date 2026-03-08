@@ -41,14 +41,12 @@ Use NGINX as a reverse proxy on port 4000 (see README for config). The app uses 
 ## Rake Tasks
 
 ```bash
-rails metadata:scan              # scan stash dir, build DB, generate thumbnails
+rails metadata:scan              # scan stash dir, build DB, generate thumbnails + enqueue previews
 rails metadata:import            # drop DB and import from metadata dir
 rails metadata:export            # export DB to JSON in metadata dir
-rails metadata:generate_sprites  # VTT sprite sheets for scrubbing
-rails metadata:generate_previews # MP4 preview clips
-rails metadata:generate_transcodes
+rails metadata:generate_previews # enqueue preview generation for all videos
+rails metadata:process_videos    # enqueue transcode jobs for videos needing processing
 rails metadata:cleanup           # remove orphaned generated files
-rails metadata:generate_all      # run all generate tasks
 ```
 
 ## App Structure

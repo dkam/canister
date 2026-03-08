@@ -2,30 +2,34 @@ Rails.application.routes.draw do
   # Health check endpoint
   get "up" => "rails/health#show", :as => :rails_health_check
 
-  # VTT sprite/thumbs — must come before resources :scenes
-  get "scenes/:id", to: "scenes#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/
+  # VTT sprite/thumbs — must come before resources :videos
+  get "videos/:id", to: "videos#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/
 
-  root to: "scenes#index"
+  root to: "videos#index"
 
-  resources :scenes, only: [:index, :show, :update] do
+  resources :videos, only: [:index, :show, :update] do
     member do
-      get :stream, to: "scenes/streams#stream"
-      get :stream_mp4, to: "scenes/streams#stream_mp4"
-      get :stream_hls, to: "scenes/streams#stream_hls"
-      get "stream_hls/:segment", to: "scenes/streams#stream_hls_segment", as: :stream_hls_segment
+      get :stream, to: "videos/streams#stream"
+      get :stream_mp4, to: "videos/streams#stream_mp4"
+      get :stream_hls, to: "videos/streams#stream_hls"
+      get "stream_hls/:segment", to: "videos/streams#stream_hls_segment", as: :stream_hls_segment
       get :screenshot
-      get "screenshot/:seconds", to: "scenes#screenshot", as: :screenshot_at
+      get "screenshot/:seconds", to: "videos#screenshot", as: :screenshot_at
       get :preview
       get :webp
-      get "vtt/chapter", to: "scenes#chapter_vtt", as: :chapter_vtt
+      get "vtt/chapter", to: "videos#chapter_vtt", as: :chapter_vtt
     end
-    resources :scene_markers, only: [] do
+    resources :video_markers, only: [] do
       member do
         get :stream
         get :preview
       end
     end
   end
+
+  # Legacy redirects
+  get "/scenes", to: redirect("/videos")
+  get "/scenes/:id", to: redirect("/videos/%{id}")
 
   resources :people, only: [:index, :show, :create] do
     collection do
@@ -45,6 +49,9 @@ Rails.application.routes.draw do
   resources :libraries do
     member do
       post :scan
+    end
+    collection do
+      post :detect_kind
     end
   end
 

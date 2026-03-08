@@ -3,6 +3,7 @@ require "test_helper"
 class LibrariesControllerTest < ActionDispatch::IntegrationTest
   setup do
     @library = Library.create!(name: "Test Library", path: "/videos", kind: "local")
+    MediaManager.instance.send(:idle)
   end
 
   test "GET index" do
@@ -37,7 +38,7 @@ class LibrariesControllerTest < ActionDispatch::IntegrationTest
     end
     assert_redirected_to library_path(Library.last)
     follow_redirect!
-    assert_select "div", /Library created/
+    assert_select "div", /Library created. Scan queued./
   end
 
   test "POST create with invalid params renders form" do
@@ -80,12 +81,12 @@ class LibrariesControllerTest < ActionDispatch::IntegrationTest
     assert_redirected_to libraries_path
   end
 
-  test "DELETE destroy nullifies scenes" do
-    scene = Scene.new(path: "test/video.mp4", library: @library)
-    scene.checksums.build(checksum_type: :opensubtitles, hash_value: "abc123")
-    scene.save!
+  test "DELETE destroy nullifies videos" do
+    video = Video.new(path: "test/video.mp4", library: @library)
+    video.checksums.build(checksum_type: :opensubtitles, hash_value: "abc123")
+    video.save!
     delete library_path(@library)
-    assert_nil scene.reload.library_id
+    assert_nil video.reload.library_id
   end
 
   test "POST scan enqueues job" do

@@ -88,10 +88,10 @@ class Canister::Scraper::Mofos < Canister::Scraper::SeleniumScraper
   def download
     authenticate
     scraped_items.each { |item|
-      next unless item.scene.nil?
+      next unless item.video.nil?
       @driver.get(item.url)
       # item.update(file_info(item))
-      download_scene(item) if item.scene.nil?
+      download_video(item) if item.video.nil?
     }
   end
 

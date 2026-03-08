@@ -80,23 +80,25 @@
       </div>
     </div>
 
-    <%# Scenes grid %>
+    <%# Videos grid %>
     <div class="flex-1 min-w-0">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Scenes</h2>
+        <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Videos</h2>
         <p class="text-sm text-gray-500 dark:text-gray-400"><%= raw @pagy.info_tag %></p>
       </div>
       <div class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-        <% @scenes.each do |scene| %>
-          <%= render "shared/scene_card", scene: scene %>
+        <% @videos.each do |video| %>
+          <%= render "shared/video_card", video: video %>
         <% end %>
       </div>
-      <% if @scenes.empty? %>
-        <p class="text-gray-400 dark:text-gray-500 py-8 text-center">No scenes found.</p>
+      <% if @videos.empty? %>
+        <p class="text-gray-400 dark:text-gray-500 py-8 text-center">No videos found.</p>
       <% end %>
-      <div class="mt-6 flex justify-center">
-        <%= raw @pagy.series_nav %>
-      </div>
+      <% if @pagy.pages > 1 %>
+        <div class="mt-6 flex justify-center">
+          <%= raw @pagy.series_nav %>
+        </div>
+      <% end %>
     </div>
 
   </div>

@@ -1,12 +1,12 @@
 import { Controller } from "@hotwired/stimulus"
 
 export default class extends Controller {
-  static values = { source: { type: String, default: "scenes-index" } }
+  static values = { source: { type: String, default: "videos-index" } }
 
   connect() {
     const ids = [...new Set(
-      [...this.element.querySelectorAll("[data-scene-id]")]
-        .map(el => el.dataset.sceneId)
+      [...this.element.querySelectorAll("[data-video-id]")]
+        .map(el => el.dataset.videoId)
     )]
     console.debug("[queue-controller]", { count: ids.length, ids })
     if (ids.length === 0) return

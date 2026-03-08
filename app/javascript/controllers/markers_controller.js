@@ -1,8 +1,8 @@
 import { Controller } from "@hotwired/stimulus"
 
-// Syncs scene marker list with the Video.js player
+// Syncs video marker list with the Video.js player
 export default class extends Controller {
-  static values = { sceneId: Number }
+  static values = { videoId: Number }
 
   seek(event) {
     const seconds = parseFloat(event.currentTarget.dataset.seconds)
@@ -15,9 +15,9 @@ export default class extends Controller {
 
   _getPlayer() {
     // Find the videojs player instance via the DOM
-    const videoEl = document.querySelector("#scene-video")
+    const videoEl = document.querySelector("#video-player-element")
     if (!videoEl) return null
     // videojs attaches its instance to the element
-    return videoEl.player || (window.videojs && window.videojs.getPlayer("scene-video"))
+    return videoEl.player || (window.videojs && window.videojs.getPlayer("video-player-element"))
   }
 }

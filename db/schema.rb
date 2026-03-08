@@ -10,7 +10,7 @@
 #
 # It's strongly recommended that you check this file into your version control system.
 
-ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
+ActiveRecord::Schema[8.1].define(version: 2026_03_05_073521) do
   create_table "active_storage_attachments", id: :uuid, force: :cascade do |t|
     t.uuid "blob_id", null: false
     t.datetime "created_at", null: false
@@ -61,11 +61,11 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.index ["ownable_type", "ownable_id"], name: "index_galleries_on_ownable_type_and_ownable_id"
   end
 
-  create_table "galleries_performers", id: false, force: :cascade do |t|
+  create_table "galleries_people", id: false, force: :cascade do |t|
     t.uuid "gallery_id", null: false
-    t.uuid "performer_id", null: false
-    t.index ["gallery_id"], name: "index_galleries_performers_on_gallery_id"
-    t.index ["performer_id"], name: "index_galleries_performers_on_performer_id"
+    t.uuid "person_id", null: false
+    t.index ["gallery_id"], name: "index_galleries_people_on_gallery_id"
+    t.index ["person_id"], name: "index_galleries_people_on_person_id"
   end
 
   create_table "libraries", id: :uuid, force: :cascade do |t|
@@ -80,7 +80,7 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.string "username"
   end
 
-  create_table "performers", id: :uuid, force: :cascade do |t|
+  create_table "people", id: :uuid, force: :cascade do |t|
     t.string "aliases"
     t.date "birthdate"
     t.string "career_length"
@@ -99,51 +99,14 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.string "twitter"
     t.datetime "updated_at", null: false
     t.string "url"
-    t.index ["name"], name: "index_performers_on_name"
+    t.index ["name"], name: "index_people_on_name"
   end
 
-  create_table "performers_scenes", id: false, force: :cascade do |t|
-    t.uuid "performer_id", null: false
-    t.uuid "scene_id", null: false
-    t.index ["performer_id"], name: "index_performers_scenes_on_performer_id"
-    t.index ["scene_id"], name: "index_performers_scenes_on_scene_id"
-  end
-
-  create_table "scene_markers", id: :uuid, force: :cascade do |t|
-    t.datetime "created_at", null: false
-    t.decimal "end_seconds"
-    t.uuid "primary_tag_id", null: false
-    t.uuid "scene_id", null: false
-    t.decimal "seconds", null: false
-    t.string "title", null: false
-    t.datetime "updated_at", null: false
-    t.index ["primary_tag_id"], name: "index_scene_markers_on_primary_tag_id"
-    t.index ["scene_id"], name: "index_scene_markers_on_scene_id"
-  end
-
-  create_table "scenes", id: :uuid, force: :cascade do |t|
-    t.string "audio_codec"
-    t.integer "bitrate"
-    t.datetime "created_at", null: false
-    t.date "date"
-    t.string "details"
-    t.decimal "duration", precision: 7, scale: 2
-    t.decimal "framerate", precision: 7, scale: 2
-    t.integer "height"
-    t.json "hls_segment_durations"
-    t.uuid "library_id"
-    t.string "path"
-    t.integer "rating"
-    t.string "size"
-    t.uuid "studio_id"
-    t.string "title"
-    t.datetime "updated_at", null: false
-    t.string "url"
-    t.string "video_codec"
-    t.integer "width"
-    t.index ["library_id"], name: "index_scenes_on_library_id"
-    t.index ["path"], name: "index_scenes_on_path", unique: true
-    t.index ["studio_id"], name: "index_scenes_on_studio_id"
+  create_table "people_videos", id: false, force: :cascade do |t|
+    t.uuid "person_id", null: false
+    t.uuid "video_id", null: false
+    t.index ["person_id"], name: "index_people_videos_on_person_id"
+    t.index ["video_id"], name: "index_people_videos_on_video_id"
   end
 
   create_table "scraped_items", id: :uuid, force: :cascade do |t|
@@ -167,10 +130,10 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
 
   create_table "screenshots", id: :uuid, force: :cascade do |t|
     t.datetime "created_at", null: false
-    t.uuid "scene_id", null: false
     t.float "timecode"
     t.datetime "updated_at", null: false
-    t.index ["scene_id"], name: "index_screenshots_on_scene_id"
+    t.uuid "video_id", null: false
+    t.index ["video_id"], name: "index_screenshots_on_video_id"
   end
 
   create_table "studios", id: :uuid, force: :cascade do |t|
@@ -198,17 +161,54 @@ ActiveRecord::Schema[8.1].define(version: 2026_03_03_120000) do
     t.index ["name"], name: "index_tags_on_name"
   end
 
+  create_table "video_markers", id: :uuid, force: :cascade do |t|
+    t.datetime "created_at", null: false
+    t.decimal "end_seconds"
+    t.uuid "primary_tag_id", null: false
+    t.decimal "seconds", null: false
+    t.string "title", null: false
+    t.datetime "updated_at", null: false
+    t.uuid "video_id", null: false
+    t.index ["primary_tag_id"], name: "index_video_markers_on_primary_tag_id"
+    t.index ["video_id"], name: "index_video_markers_on_video_id"
+  end
+
+  create_table "videos", id: :uuid, force: :cascade do |t|
+    t.string "audio_codec"
+    t.integer "bitrate"
+    t.datetime "created_at", null: false
+    t.date "date"
+    t.string "details"
+    t.decimal "duration", precision: 7, scale: 2
+    t.decimal "framerate", precision: 7, scale: 2
+    t.integer "height"
+    t.json "hls_segment_durations"
+    t.uuid "library_id"
+    t.string "path"
+    t.integer "rating"
+    t.string "size"
+    t.uuid "studio_id"
+    t.string "title"
+    t.datetime "updated_at", null: false
+    t.string "url"
+    t.string "video_codec"
+    t.integer "width"
+    t.index ["library_id"], name: "index_videos_on_library_id"
+    t.index ["path"], name: "index_videos_on_path", unique: true
+    t.index ["studio_id"], name: "index_videos_on_studio_id"
+  end
+
   add_foreign_key "active_storage_attachments", "active_storage_blobs", column: "blob_id"
   add_foreign_key "active_storage_variant_records", "active_storage_blobs", column: "blob_id"
-  add_foreign_key "scene_markers", "scenes"
-  add_foreign_key "scene_markers", "tags", column: "primary_tag_id"
-  add_foreign_key "scenes", "libraries"
-  add_foreign_key "scenes", "studios"
   add_foreign_key "scraped_items", "studios"
-  add_foreign_key "screenshots", "scenes"
+  add_foreign_key "screenshots", "videos"
   add_foreign_key "taggings", "tags"
+  add_foreign_key "video_markers", "tags", column: "primary_tag_id"
+  add_foreign_key "video_markers", "videos"
+  add_foreign_key "videos", "libraries"
+  add_foreign_key "videos", "studios"
 
   # Virtual tables defined in this database.
   # Note that virtual tables may not work with other database engines. Be careful if changing database.
-  create_virtual_table "fts_scenes", "fts5", ["title", "details", "path", "scene_id UNINDEXED"]
+  create_virtual_table "fts_videos", "fts5", ["title", "details", "path", "video_id UNINDEXED"]
 end

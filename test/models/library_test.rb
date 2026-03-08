@@ -49,19 +49,20 @@ class LibraryTest < ActiveSupport::TestCaseWithoutFixtures
     refute Library.new(kind: "local").remote?
   end
 
-  test "destroying library nullifies scene library_id" do
+  test "destroying library nullifies video library_id" do
     library = Library.create!(name: "Test", path: "/videos", kind: "local")
-    scene = Scene.new(path: "test/video.mp4", library: library)
-    scene.checksums.build(checksum_type: :opensubtitles, hash_value: "abc123")
-    scene.save!
+    video = Video.new(path: "test/video.mp4", library: library)
+    video.checksums.build(checksum_type: :opensubtitles, hash_value: "abc123")
+    video.save!
 
     library.destroy!
-    scene.reload
+    video.reload
 
-    assert_nil scene.library_id
+    assert_nil video.library_id
   end
 
   test "scan enqueues ScanJob with library id" do
+    MediaManager.instance.send(:idle)
     library = Library.create!(name: "Test", path: "/videos", kind: "local")
 
     assert_enqueued_with(job: ScanJob, args: [library.id]) do

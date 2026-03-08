@@ -48,7 +48,7 @@ export default class extends Controller {
         "X-CSRF-Token": csrfToken,
         "Accept": "application/json"
       },
-      body: JSON.stringify({ scene: { [this.fieldValue]: value } })
+      body: JSON.stringify({ video: { [this.fieldValue]: value } })
     })
       .then(response => response.json())
       .then(data => {

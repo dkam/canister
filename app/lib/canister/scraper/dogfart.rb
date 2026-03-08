@@ -76,7 +76,7 @@ class Canister::Scraper::Dogfart < Canister::Scraper::SeleniumScraper
 
           if scraped_item
             scraped_item.update(item)
-            scraped_item.populate_scene
+            scraped_item.populate_video
           else
             ScrapedItem.create(item)
             @manager.debug("Used cURL to scrape the filename. Waiting 2.5 minutes... #{item[:video_url]}")
@@ -97,7 +97,7 @@ class Canister::Scraper::Dogfart < Canister::Scraper::SeleniumScraper
     @subdomain = URI.parse(@driver.current_url).host.split('.').first
 
     scraped_items.each { |item|
-      next unless item.scene.nil?
+      next unless item.video.nil?
       old_subdomain = URI.parse(item.url).host.split('.').first
       item.url = item.url.gsub(old_subdomain, @subdomain)
 
@@ -111,7 +111,7 @@ class Canister::Scraper::Dogfart < Canister::Scraper::SeleniumScraper
 
       item.update(file_info(elements.first, item))
       download_gallery(item)
-      download_scene(item)
+      download_video(item)
     }
   end
 

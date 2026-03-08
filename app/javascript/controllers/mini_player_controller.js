@@ -38,9 +38,9 @@ export default class extends Controller {
   }
 
   _handleTurboLoad() {
-    // Hide on scene show page (player controller is present), show elsewhere
-    const onScenePage = !!document.querySelector("[data-controller~='player']")
-    if (onScenePage) {
+    // Hide on video show page (player controller is present), show elsewhere
+    const onVideoPage = !!document.querySelector("[data-controller~='player']")
+    if (onVideoPage) {
       this.element.classList.add("hidden")
     } else {
       const saved = sessionStorage.getItem("canister-mini-player")

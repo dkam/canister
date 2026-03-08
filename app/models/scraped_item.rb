@@ -3,30 +3,30 @@ class ScrapedItem < ApplicationRecord
 
   validates :title, :url, :date, :video_filename, presence: true
 
-  def scene
-    scenes = Scene.where("path like ?", "%/#{video_filename}").select { |scene| scene.studio.nil? || scene.studio.id == studio.id }
-    if scenes.count == 1
-      scenes.first
-    elsif scenes.count > 1
-      scenes = Scene.where("path like ?", "%#{studio.name}%/#{video_filename}")
-      scenes.first if scenes.count == 1
+  def video
+    videos = Video.where("path like ?", "%/#{video_filename}").select { |video| video.studio.nil? || video.studio.id == studio.id }
+    if videos.count == 1
+      videos.first
+    elsif videos.count > 1
+      videos = Video.where("path like ?", "%#{studio.name}%/#{video_filename}")
+      videos.first if videos.count == 1
     end
   end
 
   def gallery
-    return nil if scene.nil? || gallery_filename.blank?
-    scene_path = File.dirname(scene.path)
-    gallery_path = File.join(scene_path, gallery_filename)
+    return nil if video.nil? || gallery_filename.blank?
+    video_path = File.dirname(video.path)
+    gallery_path = File.join(video_path, gallery_filename)
     Gallery.find_by(path: gallery_path)
   end
 
-  def populate_scene(the_scene = nil)
-    the_scene = scene if the_scene.nil?
-    return if the_scene.nil?
+  def populate_video(the_video = nil)
+    the_video = video if the_video.nil?
+    return if the_video.nil?
 
     details = ""
     valid_tags = []
-    valid_models = []
+    valid_people = []
     if !description.blank?
       details += "#{description}\n\n"
     end
@@ -43,23 +43,23 @@ class ScrapedItem < ApplicationRecord
     if !models.blank?
       details += "Models: #{models}"
       model_names = models.split(", ")
-      model_objects = model_names.map { |model_name| Performer.where(name: model_name.strip.titleize).first }.compact
-      valid_models = model_objects if model_objects.count == model_names.count
+      model_objects = model_names.map { |model_name| Person.where(name: model_name.strip.titleize).first }.compact
+      valid_people = model_objects if model_objects.count == model_names.count
     end
 
-    the_scene.title = if title.include?("-")
+    the_video.title = if title.include?("-")
       title
     else
       title.titleize
     end
-    the_scene.url = url
-    the_scene.date = date
-    the_scene.tags = valid_tags unless the_scene.tags.count > 0
-    the_scene.performers = valid_models unless the_scene.performers.count > 0
-    the_scene.details = details
-    the_scene.gallery = gallery
-    the_scene.studio = studio
+    the_video.url = url
+    the_video.date = date
+    the_video.tags = valid_tags unless the_video.tags.count > 0
+    the_video.people = valid_people unless the_video.people.count > 0
+    the_video.details = details
+    the_video.gallery = gallery
+    the_video.studio = studio
 
-    the_scene.save
+    the_video.save
   end
 end

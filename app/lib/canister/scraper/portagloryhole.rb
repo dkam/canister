@@ -76,11 +76,11 @@ class Canister::Scraper::Portagloryhole < Canister::Scraper::SeleniumScraper
 
   def download
     scraped_items.each { |item|
-      next unless item.scene.nil? || item.gallery.nil?
+      next unless item.video.nil? || item.gallery.nil?
       @driver.get(item.url)
       item.update(file_info)
       download_gallery(item) if item.gallery.nil?
-      download_scene(item) if item.scene.nil?
+      download_video(item) if item.video.nil?
     }
   end
 
