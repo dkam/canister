@@ -12,6 +12,8 @@ class Video < ApplicationRecord
   validates :checksums, presence: true
 
   has_one_attached :preview_clip
+  has_one_attached :sprite_image
+  has_one_attached :sprite_vtt
 
 
   has_and_belongs_to_many :people

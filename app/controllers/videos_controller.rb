@@ -1,5 +1,5 @@
 class VideosController < ApplicationController
-  before_action :set_video, only: [:show, :update, :screenshot, :preview, :webp, :vtt, :chapter_vtt]
+  before_action :set_video, only: [:show, :update, :screenshot, :preview, :webp, :vtt, :chapter_vtt, :sprite, :sprite_vtt]
 
   # GET /videos
   def index
@@ -80,18 +80,23 @@ class VideosController < ApplicationController
     send_data @video.chapter_vtt, disposition: "inline"
   end
 
+  def sprite
+    return head :not_found unless @video.sprite_image.attached?
+
+    expires_in 1.week
+    send_data @video.sprite_image.download, disposition: "inline", type: "image/jpeg"
+  end
+
+  def sprite_vtt
+    return head :not_found unless @video.sprite_vtt.attached?
+
+    expires_in 1.week
+    send_data @video.sprite_vtt.download, disposition: "inline", type: "text/vtt"
+  end
+
   private
 
   def set_video
-    if params[:id].include?(".vtt")
-      params[:id].slice!("_thumbs.vtt")
-      params[:format] = "vtt"
-    end
-    if params[:id].include?(".jpg")
-      params[:id].slice!("_sprite.jpg")
-      params[:format] = "jpg"
-    end
-
     # Try to find by UUID first
     @video = Video.find_by(id: params[:id])
     # If not found by UUID, try finding by any checksum

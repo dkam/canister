@@ -4,6 +4,7 @@ class ScreenshotService
   # Generate a screenshot and attach it to a Screenshot model via ActiveStorage
   def self.generate(video, seconds: nil, width: nil)
     video.probe! unless video.probed?
+    return unless video.duration
 
     ffmpeg_path = video.ffmpeg_input
     movie = FFMPEG::Movie.new(ffmpeg_path)

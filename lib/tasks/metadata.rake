@@ -21,6 +21,13 @@ namespace :metadata do
     videos.each { |video| GeneratePreviewJob.perform_later(video.id) }
   end
 
+  desc "Enqueue sprite thumbnail generation for all videos"
+  task generate_sprites: :environment do
+    videos = Video.all
+    puts "Enqueuing sprite generation for #{videos.count} videos..."
+    videos.each { |video| GenerateSpriteJob.perform_later(video.id) }
+  end
+
   desc "Queue remux/transcode jobs for all videos needing processing"
   task process_videos: :environment do
     videos = Video.needing_processing

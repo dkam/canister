@@ -2,9 +2,6 @@ Rails.application.routes.draw do
   # Health check endpoint
   get "up" => "rails/health#show", :as => :rails_health_check
 
-  # VTT sprite/thumbs — must come before resources :videos
-  get "videos/:id", to: "videos#vtt", id: /.*_thumbs\.vtt|.*_sprite\.jpg/
-
   root to: "videos#index"
 
   resources :videos, only: [:index, :show, :update] do
@@ -18,6 +15,8 @@ Rails.application.routes.draw do
       get :preview
       get :webp
       get "vtt/chapter", to: "videos#chapter_vtt", as: :chapter_vtt
+      get "vtt/sprite", to: "videos#sprite_vtt", as: :sprite_vtt
+      get :sprite
     end
     resources :video_markers, only: [] do
       member do

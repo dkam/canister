@@ -8,6 +8,7 @@
      data-player-vtt-value="<%= chapter_vtt_video_path(@video) %>"
      data-player-video-id-value="<%= @video.id %>"
      data-player-title-value="<%= j(@video.title.presence || File.basename(@video.path, '.*')) %>"
+     <%= "data-player-sprite-vtt-value=\"#{sprite_vtt_video_path(@video)}\"".html_safe if @video.sprite_vtt.attached? %>
      class="bg-black relative">
   <video id="video-player-element"
           class="video-js vjs-default-skin vjs-big-play-centered w-full max-h-[75vh]"

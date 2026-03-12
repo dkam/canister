@@ -69,6 +69,50 @@
   }
 }
 
+/*
+ * Video.js — undo Tailwind v4 preflight damage
+ *
+ * Tailwind's preflight (`@layer base`) resets *, button, input with
+ * border:0, padding:0, margin:0, background:transparent, etc.
+ * Video.js doesn't re-set every property — it relies on browser
+ * defaults for many elements. `revert` restores browser defaults,
+ * then Video.js's own CSS applies on top.
+ */
+.video-js,
+.video-js *,
+.video-js *::before,
+.video-js *::after {
+  padding: revert;
+  margin: revert;
+  border-style: revert;
+  border-width: revert;
+  border-color: revert;
+  box-sizing: revert;
+}
+
+.video-js button,
+.video-js .vjs-control {
+  background-color: revert;
+  border-radius: revert;
+  color: revert;
+  appearance: revert;
+  cursor: pointer;
+  line-height: 1;
+}
+
+/* Show control bar on hover even before playback starts */
+.video-js:hover .vjs-control-bar,
+.video-js.vjs-has-started .vjs-control-bar {
+  display: flex;
+  opacity: 1;
+  visibility: visible;
+}
+
+/* Move volume panel to the right (after progress bar) */
+.video-js .vjs-volume-panel {
+  order: 4;
+}
+
 /* Hide default video.js big play button — replaced by custom overlay */
 .vjs-big-play-button {
   display: none !important;

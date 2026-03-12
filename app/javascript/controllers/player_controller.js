@@ -1,4 +1,5 @@
 import { Controller } from "@hotwired/stimulus"
+import { vttThumbnails } from "vtt_thumbnails"
 
 const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]
 
@@ -7,6 +8,7 @@ export default class extends Controller {
     streams: { type: Array, default: [] },
     poster: String,
     vtt: String,
+    spriteVtt: String,
     videoId: String,
     title: String,
   }
@@ -49,6 +51,11 @@ export default class extends Controller {
         src: this.vttValue,
         default: true
       }, false)
+    }
+
+    // Sprite thumbnails
+    if (this.spriteVttValue) {
+      this._vttThumbnails = vttThumbnails(this.player, { src: this.spriteVttValue })
     }
 
     // Restore saved position
@@ -111,6 +118,11 @@ export default class extends Controller {
     clearTimeout(this._overlayTimeout)
     this._savePosition()
 
+    if (this._vttThumbnails) {
+      this._vttThumbnails.destroy()
+      this._vttThumbnails = null
+    }
+
     document.dispatchEvent(new CustomEvent("canister:playing", {
       detail: {
         videoId: this.videoIdValue,
@@ -145,6 +157,11 @@ export default class extends Controller {
     }
 
     this._updateMediaSession()
+
+    // Update sprite thumbnails on navigation
+    if (this._vttThumbnails && this.spriteVttValue) {
+      this._vttThumbnails.updateSrc(this.spriteVttValue)
+    }
   }
 
   // --- Public actions for overlay buttons ---

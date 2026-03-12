@@ -7,6 +7,7 @@
 #      a. ProbeVideoJob      — ffprobe metadata (duration, codecs, resolution)
 #      b. GenerateScreenshotJob — screenshot at 20% (or custom timecode)
 #      c. GeneratePreviewJob — animated preview clip
+#      d. GenerateSpriteJob  — sprite sheet + VTT for thumbnail scrubbing
 #
 # Jobs are idempotent:
 #   - ProbeVideoJob skips if duration is already set (video.probed?)
@@ -79,6 +80,7 @@ class ScanService
       ProbeVideoJob.perform_later(item.id)
       GenerateScreenshotJob.perform_later(item.id)
       GeneratePreviewJob.perform_later(item.id)
+      GenerateSpriteJob.perform_later(item.id)
     end
 
     @path
